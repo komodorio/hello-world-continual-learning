@@ -19,10 +19,16 @@ async def complete(model: str, messages: list[Message], **kwargs: Any) -> Any:
 
 
 def text_of(response: Any) -> str:
-    """Extract the assistant text from a LiteLLM ModelResponse."""
-    content = response.choices[0].message.content
+    """Extract the assistant text from a LiteLLM ModelResponse; fail loudly on truncation."""
+    choice = response.choices[0]
+    content = choice.message.content
     if not isinstance(content, str):
         raise ValueError(f"model returned no text content: {content!r}")
+    if choice.finish_reason == "length":
+        raise ValueError(
+            f"model output was cut off at max_tokens (got {len(content)} chars); "
+            "reasoning models spend tokens before answering, raise max_tokens"
+        )
     return content
 
 
