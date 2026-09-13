@@ -1,26 +1,35 @@
 id: refund
 input: |
   Customer message:
-  Hi, I'm Dana. I ordered a 1 kg bag of the Ethiopia Guji on the 3rd of last month (order #48213)
-  and it arrived on the 6th. I only opened it this week, 38 days after delivery, and the beans
-  are stale and taste like cardboard - I think the bag seal was broken. I'd like a refund please.
+  Hi, I'm Dana. I ordered a 1 kg bag of whole-bean Ethiopia Guji on the 3rd of last month
+  (order #48213) and it arrived on the 6th. I only opened it three days ago, 38 days after
+  delivery, and the beans are stale and taste like cardboard - I think the bag seal was broken.
+  I'd like a refund please. Also, I paid half with a gift card and half with my Visa - where
+  would the money go back to?
 
   Policy snippet:
   Refunds & returns. Unopened coffee may be returned for a full refund within 30 days of
   delivery; after 30 days no refund is available. Opened coffee is not eligible for a change-of-
   mind refund at any time. Defective or damaged items (including compromised packaging or
-  stale product) are covered by our freshness guarantee for 60 days from delivery: we replace
-  the item or refund it, at the customer's choice, once the customer sends a photo of the bag
-  and its roast-date label to support@beanhouse.example.
+  stale product) are covered by our freshness guarantee for 60 days from delivery, provided
+  the customer reports the problem within 7 days of opening the bag. Under the guarantee we
+  replace the item or refund it, at the customer's choice, once the customer sends a photo of
+  the bag and its roast-date label to support@beanhouse.example; claims are processed within
+  2 business days of receiving the photo.
+  Payments. Refunds always go back to the original payment method. The portion paid with a
+  gift card is returned as gift-card balance, never as cash or to a card.
 
 expected: |
   Must say:
-  - Dana is covered by the 60-day freshness guarantee because the beans arrived stale / the seal was broken.
+  - Dana is covered by the 60-day freshness guarantee (stale beans / broken seal) and she reported it within 7 days of opening, so the 30-day limit does not apply.
   - She can choose either a replacement or a refund.
-  - Next step: send a photo of the bag and its roast-date label to support@beanhouse.example.
+  - Next step: send a photo of the bag and its roast-date label to support@beanhouse.example; the claim is processed within 2 business days of receiving it.
+  - Where the money goes: the Visa half back to the Visa card, the gift-card half back as gift-card balance.
   Must not:
-  - Refuse the refund because the 30-day window has passed (the defect exception applies).
-  - Approve the refund unconditionally without asking for the photo.
+  - Refuse the refund because the 30-day window has passed or because the bag is opened (the defect exception applies).
+  - Approve or issue the refund unconditionally without asking for the photo.
+  - Say the whole amount goes back to the card, or offer to refund the gift-card half as cash / to the card.
   - Invent extra compensation (discount codes, free shipping, store credit).
   Must answer:
   - Whether she can get a refund.
+  - Where the money goes back to.

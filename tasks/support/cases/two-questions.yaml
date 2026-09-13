@@ -1,27 +1,32 @@
 id: two-questions
 input: |
   Customer message:
-  Hello, this is Tom. Two things. First, I want to cancel my monthly subscription - I've got
-  more coffee than I can drink right now. Second, my accountant needs a record of everything
-  I've ordered from you since I signed up; can you send me my full order history? My next
-  billing date is the 21st. Thanks.
+  Hello, this is Tom, writing on the 19th. Two things. First, I want to cancel my monthly
+  subscription - I've got more coffee than I can drink right now. Second, my accountant needs
+  a record of everything I've ordered from you since I signed up; can you send me my full
+  order history? My next billing date is the 21st. Thanks.
 
   Policy snippet:
   Subscriptions. A subscription can be cancelled at any time from Account > Subscription >
   Cancel, or by asking support. Cancellation takes effect at the end of the current billing
-  period; the customer keeps all benefits until then and is not charged again. Subscriptions
-  can also be paused for up to 3 months instead of cancelled.
+  period and the customer keeps all benefits until then. Because shipments are packed in
+  advance, a cancellation requested fewer than 3 days before the next billing date is applied
+  to the following period: the next charge and shipment still go ahead and the subscription
+  ends after that one. Subscriptions can also be paused for up to 3 months instead of
+  cancelled; the same 3-day notice applies.
   Data export. A customer can request an export of their full order history (CSV) from
   Account > Privacy > Export data. The file is emailed to the account address within 48 hours.
-  Support cannot attach the export to a reply.
+  Support cannot attach the export to a reply or email it manually.
 
 expected: |
   Must say:
-  - How to cancel (Account > Subscription > Cancel, or support can do it) and that it takes effect at the end of the current billing period, so Tom keeps access until the 21st and is not charged again.
-  - How to get the order history: Account > Privacy > Export data, a CSV emailed within 48 hours.
+  - How to cancel (Account > Subscription > Cancel, or support can do it).
+  - Because the request comes only 2 days before the 21st, the cancellation applies to the following period: Tom will still be charged and shipped once more on the 21st and the subscription ends after that.
+  - How to get the order history: Account > Privacy > Export data, a CSV emailed to his account address within 48 hours.
   Must not:
   - Answer only one of the two requests.
-  - Promise to attach or email the export directly from support.
+  - Tell Tom he will not be charged on the 21st (the 3-day notice rule means he will be).
+  - Promise to attach the export or email it manually from support.
   - Claim cancellation is immediate or that a prorated refund is issued.
   Must answer:
   - Both requests: cancellation and order-history export.

@@ -13,7 +13,7 @@ output_format: |
   - Plain text only: no markdown, no headings, no bullet points, no subject line.
   - Open with a greeting that uses the customer's first name.
   - Sign off with exactly: "Maya, Beanhouse Support".
-  - Stay under 150 words unless the ticket states a tighter limit.
+  - Stay under 120 words unless the ticket or its policy states a tighter limit.
 
 # Hints for the judge, beyond the per-case `expected` list.
 grading_guidance: |

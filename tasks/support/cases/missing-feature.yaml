@@ -1,22 +1,32 @@
 id: missing-feature
 input: |
   Customer message:
-  Hey, Priya here. I'm hosting brunch on Sunday and I'm out of beans. If I order now (it's
-  Friday afternoon) can you deliver on Sunday morning? Happy to pay extra for a Sunday slot.
+  Hey, Priya here. I'm hosting brunch on Sunday and I'm out of beans. It's Friday, 15:30. If I
+  order right now can you deliver on Sunday morning? Happy to pay extra for a Sunday slot. If
+  not, could I pick it up from you on Sunday instead? Oh, and a friend said the Kenya AA is
+  back in stock - is it?
 
   Policy snippet:
   Delivery. We ship Monday to Saturday. Orders placed before 14:00 on a shipping day leave the
   roastery the same day; later orders leave the next shipping day. Standard delivery takes 1-2
-  shipping days. Express delivery (next shipping day, ordered before 14:00) is available for
-  an extra fee. We do not ship or deliver on Sundays or public holidays. Same-day pickup from
-  the roastery is available Monday to Saturday, 9:00-17:00.
+  shipping days. Express delivery (arrives the next shipping day after dispatch) is available
+  for an extra fee. We do not ship, deliver, or open for pickup on Sundays or public holidays.
+  Same-day pickup from the roastery is available Monday to Saturday, 9:00-17:00, for orders
+  placed at least 2 hours before collection.
+  Stock. Support agents do not have live stock information; customers should check the
+  product page, where availability is shown in real time.
 
 expected: |
   Must say:
-  - No, we do not deliver on Sundays (no paid Sunday slot exists either).
-  - A concrete nearest option: express delivery for Saturday only works if ordered before 14:00 on a shipping day (Friday afternoon is past the cutoff, so the order leaves Saturday and arrives Monday-Tuesday), so the realistic option is same-day pickup from the roastery on Saturday 9:00-17:00.
+  - No, we do not deliver on Sundays, and there is no paid Sunday slot.
+  - No, the roastery is closed for pickup on Sundays.
+  - The realistic option: pick up from the roastery on Saturday, 9:00-17:00 (order at least 2 hours before collecting). An order placed Friday at 15:30 is past the 14:00 cutoff, so it would only ship Saturday and arrive Monday at the earliest - even with express.
+  - On the Kenya AA: support cannot see live stock; check the product page for real-time availability.
   Must not:
-  - Invent a Sunday delivery, a weekend courier, or a paid Sunday option.
-  - Claim Saturday delivery is possible for an order placed Friday afternoon.
+  - Invent a Sunday delivery, a weekend courier, a paid Sunday option, or Sunday pickup.
+  - Claim Saturday delivery is possible for an order placed Friday at 15:30.
+  - State whether the Kenya AA is in stock (in either direction).
   Must answer:
   - Whether Sunday delivery is possible.
+  - Whether Sunday pickup is possible.
+  - Whether the Kenya AA is in stock (by pointing to the product page).
