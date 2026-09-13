@@ -1,7 +1,7 @@
 import pytest
 
-from prompt_coach import coach
-from prompt_coach.coach import CoachOutputError, parse_proposal, select_failures
+from prompt_coach.roles import coach
+from prompt_coach.roles.coach import CoachOutputError, parse_proposal, select_failures
 from prompt_coach.types import Graded, PromptVersion, Record, Task, Verdict
 from tests.conftest import FakeModel
 

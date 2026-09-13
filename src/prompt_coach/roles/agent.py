@@ -11,19 +11,19 @@ from google.adk.models.lite_llm import LiteLlm, LiteLLMClient
 from google.adk.runners import InMemoryRunner
 from google.genai import types as genai_types
 
-from prompt_coach import models
+from prompt_coach import llm
 from prompt_coach.types import AgentName, Case, Record
 
 _APP_NAME = "prompt_coach"
 
 
 class _Client(LiteLLMClient):
-    """ADK's LiteLlm client hook, routed through ``models.complete`` so tests can fake it."""
+    """ADK's LiteLlm client hook, routed through ``llm.complete`` so tests can fake it."""
 
     async def acompletion(self, model: str, messages: list[Any], tools: Any = None, **kwargs: Any) -> Any:
         if tools:
             kwargs["tools"] = tools
-        return await models.complete(model, messages, **kwargs)
+        return await llm.complete(model, messages, **kwargs)
 
     def completion(self, model: str, messages: list[Any], tools: Any = None, **kwargs: Any) -> Any:
         raise NotImplementedError("prompt-coach only uses the async path")
@@ -55,9 +55,7 @@ class Agent:
             )
             message = genai_types.Content(role="user", parts=[genai_types.Part(text=case.input)])
             reply_parts: list[str] = []
-            async for event in runner.run_async(
-                user_id=session.user_id, session_id=session.id, new_message=message
-            ):
+            async for event in runner.run_async(user_id=session.user_id, session_id=session.id, new_message=message):
                 if event.is_final_response() and event.content and event.content.parts:
                     reply_parts.extend(p.text for p in event.content.parts if p.text)
         finally:

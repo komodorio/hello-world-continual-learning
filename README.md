@@ -69,33 +69,87 @@ refund and a free month, in under 80 words. The policy allows a 10% credit, only
 the words "late delivery", and says not to offer escalation unless asked. The trap is promising what
 you cannot, going cold, or going long.
 
-## How the pieces fit
+## How it works
+
+One round, as a sequence. Everything left of the judge runs in parallel with `asyncio.gather`;
+the judge never learns which agent wrote a reply; the coach never sees the checklist.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant T as Teacher<br/>(strong model, prompt v1, fixed)
+    participant S as Student<br/>(weak model, prompt vN)
+    participant J as Evaluator<br/>(judge with the checklist)
+    participant C as Coach<br/>(never sees the checklist)
+    Note over T,S: same 4 cases, same round
+    T->>J: 4 replies
+    S->>J: 4 replies
+    J-->>J: score each reply 0–1 with a written reason<br/>(blind to who wrote it)
+    J->>C: student replies below 0.7 with reasons<br/>plus a one-paragraph recommendation
+    alt student mean ≥ teacher average − gap (and round ≥ 2)
+        J-->>S: stop — gap closed
+    else budget left
+        C->>S: prompt vN+1 with a one-line changelog
+        Note over S: next round runs with vN+1.<br/>The teacher's prompt never changes.
+    end
+```
+
+And the same thing as a loop. The only arrow that carries change is the amber one.
 
 ```mermaid
 flowchart LR
-    T[tasks/support<br/>task.yaml + cases/*.yaml] --> L
-    subgraph L[loop.py · one round]
-        direction TB
-        A1[teacher agent<br/>fixed prompt] --> J[evaluator<br/>score 0..1 + reason]
-        A2[student agent<br/>prompt vN] --> J
-        J --> S[scorecards + recommendation]
-        S -->|gap open| C[coach<br/>writes prompt vN+1]
-        S -->|gap closed or max rounds| X[stop]
+    classDef student fill:#f5a52422,stroke:#f5a524,color:#000
+    P[("prompt vN")]:::student
+    P --> S[student agent]
+    T[teacher agent<br/>prompt v1, fixed] --> J
+    S --> J[evaluator<br/>score + reason per reply]
+    J --> D{student mean ≥<br/>teacher avg − gap?}
+    D -- yes --> X([stop: gap closed])
+    D -- no, rounds left --> C[coach<br/>reads low scores + reasons]
+    D -- no, budget spent --> Y([stop: budget spent])
+    C -- "prompt vN+1 + changelog" --> P
+    linkStyle 6 stroke:#f5a524,stroke-width:2px
+```
+
+### Where the code lives
+
+```mermaid
+flowchart TB
+    subgraph task["tasks/support/"]
+        TY[task.yaml<br/>prompt v1 · format · grading guidance]
+        CS[cases/*.yaml<br/>trap · input · expected]
     end
-    C -.-> A2
-    L --> E[Events]
-    E --> CLI[cli.py · rich tables + prompt diff]
-    E --> SRV[server.py · SSE → static/index.html]
-    L --> R[(runs/&lt;ts&gt;.json)]
-    R --> CLI
-    R --> SRV
+    subgraph pkg["src/prompt_coach/"]
+        direction TB
+        TK[task.py · types.py · config.py]
+        LLM[llm.py<br/>the one place that calls LiteLLM]
+        subgraph roles["roles/"]
+            AG[agent.py<br/>ADK LlmAgent + LiteLlm]
+            EV[evaluator.py]
+            CO[coach.py]
+        end
+        PR[prompts/<br/>evaluator.md · coach.md]
+        LP[loop.py<br/>run_loop → Events]
+        RN[runs.py<br/>runs/&lt;id&gt;.json · replay]
+        CLI[cli.py<br/>cases · run · test · replay · serve]
+        WEB[web/server.py + static/index.html<br/>FastAPI · SSE · OpenAPI at /docs]
+    end
+    task --> TK --> LP
+    AG & EV & CO --> LLM
+    PR --> EV & CO
+    roles --> LP
+    LP --> RN
+    LP --> CLI
+    LP --> WEB
+    RN --> CLI & WEB
 ```
 
 Agents are Google ADK `LlmAgent`s over a LiteLLM model adapter, so any model with a LiteLLM string
-works. The evaluator and coach are plain LLM calls with a system prompt (`prompts/evaluator.md`,
-`prompts/coach.md` inside the package). Everything the loop does is expressed as `Event`s; the
-terminal and the web page are two renderers of the same stream, and every round is appended to a JSON
-file so you can replay a run without spending a token.
+works; all ADK plumbing stays inside `roles/agent.py`. The evaluator and coach are plain LLM calls
+with the system prompts in `prompts/`. `llm.py` is the single seam every model call goes through,
+which is also what the tests replace with a fake. Everything the loop does is expressed as `Event`s;
+the terminal and the web page are two renderers of the same stream, and `runs.py` writes every round
+to a JSON file so a run can be replayed without spending a token.
 
 ## Quickstart
 
@@ -322,21 +376,28 @@ uv run pytest -m live
 ## Layout
 
 ```
-config.example.yaml  .env.example  tasks/support/{task.yaml,cases/*.yaml}
+README.md  LICENSE  pyproject.toml  config.example.yaml  config.yaml  .env.example
+docs/            screenshots
+tasks/support/   task.yaml + cases/{refund,two-questions,missing-feature,compensation}.yaml
 src/prompt_coach/
-  types.py      Case, Record, Verdict, Scorecard, PromptVersion, RoundResult, Event
-  agent.py      Agent over ADK LlmAgent + LiteLlm (all ADK plumbing lives here)
-  models.py     the one place that calls LiteLLM; tests fake this
-  task.py       load_task(folder, case_ids)
-  evaluator.py  grade(record, case) -> Verdict;  recommend(teacher, student) -> str
-  coach.py      propose(...) -> PromptVersion v+1
-  loop.py       run_loop(config, task) -> AsyncIterator[Event];  save/load/replay runs
-  cli.py        prompt-coach cases | run | test | replay | serve
-  server.py     FastAPI: / /cases /start /test /events /runs /runs/{id}  (OpenAPI at /docs)
-  static/index.html   the page; vanilla JS, no build step
-  prompts/{evaluator,coach}.md
-  smoke.py      both agents on all cases, replies only
-tests/          FakeModel fixture + one live test
+  types.py       Case, Task, Record, Verdict, Scorecard, PromptVersion, RoundResult, RunRecord, Event
+  config.py      config.yaml + .env → Config
+  task.py        load_task(folder, case_ids)
+  llm.py         complete / complete_json: the one place that calls LiteLLM (tests fake this)
+  prompts/       evaluator.md, coach.md, and load_prompt()
+  roles/
+    agent.py     Agent over ADK LlmAgent + LiteLlm — teacher and student are the same class
+    evaluator.py grade(record, case) → Verdict;  recommend(teacher, student) → str
+    coach.py     propose(...) → PromptVersion v+1, with a hard word cap
+  loop.py        run_loop(config, task) → AsyncIterator[Event]; the stop rule
+  runs.py        save_run / load_run / replay; runs/<id>.json
+  cli.py         prompt-coach cases | run | test | replay | serve   (Typer + rich)
+  web/
+    server.py    FastAPI: /cases /start /test /events (SSE) /runs /runs/{id}; OpenAPI at /docs
+    static/      index.html — the page; vanilla JS, no build step, light + dark
+  smoke.py       both agents on all cases, replies only
+tests/           FakeModel fixture, offline suites for every module, one opt-in live test
+.github/workflows/ci.yml   ruff + pytest on 3.11 and 3.12
 ```
 
 MIT licensed.

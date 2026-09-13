@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from prompt_coach import models
-from prompt_coach.models import ModelOutputError
+from prompt_coach import llm
+from prompt_coach.llm import ModelOutputError
 from prompt_coach.prompts import load_prompt
 from prompt_coach.types import Case, Graded, Record, Task, Verdict
 
@@ -17,7 +17,7 @@ class JudgeOutputError(ModelOutputError):
 def parse_verdict(text: str) -> Verdict:
     """Parse the judge's reply strictly; clamp the score to [0, 1]; raise on anything else."""
     try:
-        return verdict_from(models.extract_json_object(text))
+        return verdict_from(llm.extract_json_object(text))
     except ModelOutputError as exc:
         raise JudgeOutputError(str(exc)) from exc
 
@@ -46,7 +46,9 @@ async def grade(record: Record, case: Case, *, task: Task, model: str) -> Verdic
     if record.case_id != case.id:
         raise ValueError(f"record is for case '{record.case_id}', not '{case.id}'")
     try:
-        data = await models.complete_json(model, load_prompt("evaluator"), _grade_input(record, case, task), max_tokens=4000)
+        data = await llm.complete_json(
+            model, load_prompt("evaluator"), _grade_input(record, case, task), max_tokens=4000
+        )
     except ModelOutputError as exc:
         raise JudgeOutputError(str(exc)) from exc
     return verdict_from(data)
@@ -74,7 +76,7 @@ async def recommend(teacher_results: list[Graded], student_results: list[Graded]
             f"teacher score {t.verdict.score:.2f}: {t.verdict.reason}\n"
             f"student score {s.verdict.score:.2f}: {s.verdict.reason}\n"
         )
-    text = await models.complete_text(model, _RECOMMEND_SYSTEM, "\n".join(lines), max_tokens=4000)
+    text = await llm.complete_text(model, _RECOMMEND_SYSTEM, "\n".join(lines), max_tokens=4000)
     if not text.strip():
         raise JudgeOutputError("empty recommendation from judge")
     return text.strip()

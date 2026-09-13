@@ -5,9 +5,9 @@ import os
 import pytest
 from dotenv import load_dotenv
 
-from prompt_coach import evaluator
-from prompt_coach.agent import Agent
 from prompt_coach.config import load_config
+from prompt_coach.roles import evaluator
+from prompt_coach.roles.agent import Agent
 from prompt_coach.task import load_task
 from tests.conftest import REPO
 

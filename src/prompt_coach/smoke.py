@@ -14,8 +14,8 @@ import asyncio
 from rich.console import Console
 from rich.panel import Panel
 
-from prompt_coach.agent import Agent
 from prompt_coach.config import load_config
+from prompt_coach.roles.agent import Agent
 from prompt_coach.task import load_task
 from prompt_coach.types import Record
 
@@ -38,7 +38,8 @@ async def _main(config_path: str, case_ids: list[str]) -> None:
         console.print(
             Panel(
                 record.reply,
-                title=f"[bold]{record.case_id}[/] · {record.agent} ({record.model}) · {words} words · {record.latency_s}s",
+                title=f"[bold]{record.case_id}[/] · {record.agent} ({record.model})"
+                f" · {words} words · {record.latency_s}s",
                 border_style="green" if record.agent == "teacher" else "yellow",
             )
         )

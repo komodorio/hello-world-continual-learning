@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from litellm import ModelResponse
 
-from prompt_coach import models
+from prompt_coach import llm
 from prompt_coach.config import Config, LoopSettings, Models
 from prompt_coach.task import load_task
 from prompt_coach.types import Case, Task
@@ -22,7 +22,9 @@ FAKE_MODELS = Models(teacher="fake/teacher", student="fake/student", evaluator="
 
 
 def _response(text: str) -> ModelResponse:
-    return ModelResponse(choices=[{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": text}}])
+    return ModelResponse(
+        choices=[{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": text}}]
+    )
 
 
 class FakeModel:
@@ -84,7 +86,9 @@ class FakeModel:
             current = re.search(r"## Student prompt v(\d+)", user)
             assert current, "fake coach did not find the current version"
             nxt = int(current.group(1)) + 1
-            return json.dumps({"prompt": f"[v{nxt}] Be brief and answer every question.", "changelog": f"fake change for v{nxt}"})
+            return json.dumps(
+                {"prompt": f"[v{nxt}] Be brief and answer every question.", "changelog": f"fake change for v{nxt}"}
+            )
         raise AssertionError(f"unexpected model in test: {model}")
 
 
@@ -96,7 +100,7 @@ def support_task() -> Task:
 @pytest.fixture
 def fake(monkeypatch: pytest.MonkeyPatch, support_task: Task) -> FakeModel:
     model = FakeModel(support_task.cases)
-    monkeypatch.setattr(models, "complete", model)
+    monkeypatch.setattr(llm, "complete", model)
     return model
 
 

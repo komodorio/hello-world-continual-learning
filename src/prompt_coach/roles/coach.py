@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from prompt_coach import models
-from prompt_coach.models import ModelOutputError
+from prompt_coach import llm
+from prompt_coach.llm import ModelOutputError
 from prompt_coach.prompts import load_prompt
 from prompt_coach.types import Graded, PromptVersion
 
@@ -34,7 +34,8 @@ def _coach_input(
 ) -> str:
     parts = [
         f"## Teacher prompt (reference)\n{teacher_prompt.strip()}\n",
-        f"## Student prompt v{student_prompt.version} (current, {len(student_prompt.text.split())} words)\n{student_prompt.text.strip()}\n",
+        f"## Student prompt v{student_prompt.version} (current, {len(student_prompt.text.split())} words)\n"
+        f"{student_prompt.text.strip()}\n",
         "## Prompt history (version, mean score, what changed)\n" + "\n".join(history or ["(first round)"]) + "\n",
         f"## Grader's recommendation\n{recommendation.strip() or '(none)'}\n",
         "## Student replies that scored poorly this round\n",
@@ -53,7 +54,7 @@ def _coach_input(
 
 def parse_proposal(text: str, current_version: int) -> PromptVersion:
     try:
-        return proposal_from(models.extract_json_object(text), current_version)
+        return proposal_from(llm.extract_json_object(text), current_version)
     except ModelOutputError as exc:
         raise CoachOutputError(str(exc)) from exc
 
@@ -86,7 +87,7 @@ async def propose(
     system = load_prompt("coach")
     for attempt in range(2):
         try:
-            data = await models.complete_json(model, system, user, max_tokens=6000)
+            data = await llm.complete_json(model, system, user, max_tokens=6000)
         except ModelOutputError as exc:
             raise CoachOutputError(str(exc)) from exc
         proposal = proposal_from(data, student_prompt.version)
@@ -95,5 +96,8 @@ async def propose(
             return proposal
         if attempt == 0:
             # Long prompts are exactly what makes the student worse; ask once more, then give up.
-            user += f"\n\n## Correction\nYour previous answer was {words} words. The whole prompt must be under {MAX_PROMPT_WORDS} words. Cut, do not compress into denser sentences."
+            user += (
+                f"\n\n## Correction\nYour previous answer was {words} words. The whole prompt must be under "
+                f"{MAX_PROMPT_WORDS} words. Cut, do not compress into denser sentences."
+            )
     raise CoachOutputError(f"coach kept returning prompts over {MAX_PROMPT_WORDS} words ({words} words)")

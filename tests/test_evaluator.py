@@ -1,7 +1,7 @@
 import pytest
 
-from prompt_coach import evaluator
-from prompt_coach.evaluator import JudgeOutputError, parse_verdict
+from prompt_coach.roles import evaluator
+from prompt_coach.roles.evaluator import JudgeOutputError, parse_verdict
 from prompt_coach.types import Graded, Record, Task, Verdict
 from tests.conftest import FakeModel
 

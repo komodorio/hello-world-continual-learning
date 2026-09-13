@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from prompt_coach.config import Config
-from prompt_coach.server import create_app
+from prompt_coach.web.server import create_app
 from tests.conftest import FakeModel
 
 
@@ -50,7 +50,9 @@ async def test_index_and_cases(client: httpx.AsyncClient) -> None:
     assert "Output format:" in body["prompt"]
 
 
-async def test_start_streams_events_and_saves_the_run(client: httpx.AsyncClient, fake: FakeModel, config: Config) -> None:
+async def test_start_streams_events_and_saves_the_run(
+    client: httpx.AsyncClient, fake: FakeModel, config: Config
+) -> None:
     fake.student_scores = [{c.id: 0.5 for c in fake.cases}, {c.id: 0.9 for c in fake.cases}]
     started = await client.post("/start", json={"cases": ["refund", "compensation"], "rounds": 3})
     assert started.status_code == 200

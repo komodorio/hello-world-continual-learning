@@ -1,16 +1,15 @@
-"""The teacher/student/evaluator/coach loop. Yields Events; the CLI and the server render them."""
+"""The teacher/student/evaluator/coach loop. Yields Events; the CLI and the web UI render them."""
 
 from __future__ import annotations
 
 import asyncio
-import secrets
-from collections.abc import AsyncIterator, Iterator
-from datetime import datetime, timezone
-from pathlib import Path
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
-from prompt_coach import coach, evaluator
-from prompt_coach.agent import Agent
 from prompt_coach.config import Config
+from prompt_coach.roles import coach, evaluator
+from prompt_coach.roles.agent import Agent
+from prompt_coach.runs import new_run_id, save_run
 from prompt_coach.types import (
     AgentName,
     Case,
@@ -22,11 +21,6 @@ from prompt_coach.types import (
     Scorecard,
     Task,
 )
-
-
-def new_run_id() -> str:
-    """Sortable timestamp plus a short random suffix so two runs in the same second never collide."""
-    return f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(2)}"
 
 
 async def _run_and_grade(agent: Agent, case: Case, task: Task, judge_model: str) -> Graded:
@@ -45,7 +39,9 @@ def _sorted(graded: list[Graded], cases: list[Case]) -> list[Graded]:
     return sorted(graded, key=lambda g: (order[g.record.case_id], g.record.agent != "teacher"))
 
 
-def stop_reason(result: RoundResult, gap: float, max_rounds: int, teacher_baseline: float | None = None, min_rounds: int = 1) -> str:
+def stop_reason(
+    result: RoundResult, gap: float, max_rounds: int, teacher_baseline: float | None = None, min_rounds: int = 1
+) -> str:
     """Empty string means keep going.
 
     ``teacher_baseline`` is the teacher's mean averaged over all rounds so far; using it instead of
@@ -60,17 +56,6 @@ def stop_reason(result: RoundResult, gap: float, max_rounds: int, teacher_baseli
     return ""
 
 
-def save_run(run: RunRecord, runs_dir: Path) -> Path:
-    runs_dir.mkdir(parents=True, exist_ok=True)
-    path = runs_dir / f"{run.id}.json"
-    path.write_text(run.model_dump_json(indent=2))
-    return path
-
-
-def load_run(path: Path | str) -> RunRecord:
-    return RunRecord.model_validate_json(Path(path).read_text())
-
-
 async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> AsyncIterator[Event]:
     """Run rounds until the gap closes or the budget is spent; persist after every round."""
     settings = config.loop
@@ -78,7 +63,7 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
     student_prompt = PromptVersion(version=1, text=teacher_prompt, changelog="initial prompt (same as teacher)")
     run = RunRecord(
         id=run_id or new_run_id(),
-        started_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        started_at=datetime.now(UTC).isoformat(timespec="seconds"),
         task=task.name,
         case_ids=[c.id for c in task.cases],
         models=config.models.model_dump(),
@@ -98,7 +83,11 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
             graded = _sorted(
                 list(
                     await asyncio.gather(
-                        *[_run_and_grade(a, c, task, config.models.evaluator) for c in task.cases for a in (teacher, student)]
+                        *[
+                            _run_and_grade(a, c, task, config.models.evaluator)
+                            for c in task.cases
+                            for a in (teacher, student)
+                        ]
                     )
                 ),
                 task.cases,
@@ -123,12 +112,17 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
             )
             teacher_means = [r.teacher.mean for r in run.rounds] + [teacher_card.mean]
             reason = stop_reason(
-                result, settings.gap, settings.max_rounds, sum(teacher_means) / len(teacher_means), min_rounds=settings.min_rounds
+                result,
+                settings.gap,
+                settings.max_rounds,
+                sum(teacher_means) / len(teacher_means),
+                min_rounds=settings.min_rounds,
             )
             if not reason:
                 failures = coach.select_failures(graded, settings.coach_threshold)
                 history = [
-                    f"v{r.student_prompt.version} mean {r.student.mean:.2f} (teacher {r.teacher.mean:.2f}): {r.student_prompt.changelog}"
+                    f"v{r.student_prompt.version} mean {r.student.mean:.2f} (teacher {r.teacher.mean:.2f}): "
+                    f"{r.student_prompt.changelog}"
                     for r in [*run.rounds, result]
                 ]
                 result.next_prompt = await coach.propose(
@@ -157,17 +151,4 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
         yield Event(type="error", round=len(run.rounds) + 1, message=run.stop_reason, run=run)
         raise
 
-    yield Event(type="run_finished", message=run.stop_reason, run=run)
-
-
-def replay(run: RunRecord) -> Iterator[Event]:
-    """Re-emit the events of a saved run in the same order as ``run_loop`` did, without tokens."""
-    yield Event(type="run_started", run=run.model_copy(update={"rounds": [], "stop_reason": ""}, deep=True))
-    for result in run.rounds:
-        yield Event(type="round_started", round=result.round, prompt=result.student_prompt)
-        for g in result.graded:
-            yield Event(type="graded", round=result.round, graded=g)
-        yield Event(type="round_finished", round=result.round, result=result)
-        if result.next_prompt is not None:
-            yield Event(type="prompt_proposed", round=result.round, prompt=result.next_prompt)
     yield Event(type="run_finished", message=run.stop_reason, run=run)

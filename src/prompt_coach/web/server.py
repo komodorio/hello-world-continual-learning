@@ -14,9 +14,10 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from prompt_coach import evaluator, loop
-from prompt_coach.agent import Agent
+from prompt_coach import loop, runs
 from prompt_coach.config import Config
+from prompt_coach.roles import evaluator
+from prompt_coach.roles.agent import Agent
 from prompt_coach.task import load_task
 from prompt_coach.types import AgentName, Case, Event, Record, RunRecord, Task, Verdict
 
@@ -106,7 +107,7 @@ def _sse(event: Event) -> str:
 
 
 def _run_summary(run_path: Path) -> RunSummary:
-    run = loop.load_run(run_path)
+    run = runs.load_run(run_path)
     return RunSummary(
         id=run.id,
         started_at=run.started_at,
@@ -183,7 +184,10 @@ def create_app(config: Config) -> FastAPI:
         tags=["runs"],
         summary="Start the teacher/student/evaluator/coach loop in the background",
         response_model=StartResponse,
-        responses={400: {"description": "Unknown or duplicate case id"}, 409: {"description": "A run is already in progress"}},
+        responses={
+            400: {"description": "Unknown or duplicate case id"},
+            409: {"description": "A run is already in progress"},
+        },
     )
     async def start(request: StartRequest) -> StartResponse:
         if state.running:
@@ -194,7 +198,7 @@ def create_app(config: Config) -> FastAPI:
             run_config.loop.max_rounds = request.rounds
         if request.gap is not None:
             run_config.loop.gap = request.gap
-        run_id = loop.new_run_id()
+        run_id = runs.new_run_id()
         state.events.clear()
         state.task = asyncio.create_task(run_in_background(run_config, task, run_id))
         return StartResponse(id=run_id, cases=[c.id for c in task.cases])
@@ -223,7 +227,12 @@ def create_app(config: Config) -> FastAPI:
         summary="Stream the current run's events (SSE)",
         description=SSE_DOC,
         response_class=StreamingResponse,
-        responses={200: {"content": {"text/event-stream": {"schema": {"type": "string", "format": "sse"}}}, "description": "text/event-stream of Event JSON"}},
+        responses={
+            200: {
+                "content": {"text/event-stream": {"schema": {"type": "string", "format": "sse"}}},
+                "description": "text/event-stream of Event JSON",
+            }
+        },
     )
     async def events() -> StreamingResponse:
         queue = state.subscribe()
@@ -233,7 +242,7 @@ def create_app(config: Config) -> FastAPI:
                 while True:
                     try:
                         event = await asyncio.wait_for(queue.get(), timeout=15)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         yield ": keep-alive\n\n"
                         continue
                     if event is None:
@@ -246,7 +255,7 @@ def create_app(config: Config) -> FastAPI:
         return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
     @app.get("/runs", tags=["runs"], summary="List saved runs, newest first", response_model=list[RunSummary])
-    async def runs() -> list[RunSummary]:
+    async def list_runs() -> list[RunSummary]:
         if not config.runs_dir.exists():
             return []
         return [_run_summary(p) for p in sorted(config.runs_dir.glob("*.json"), reverse=True)]
@@ -262,12 +271,19 @@ def create_app(config: Config) -> FastAPI:
         path = config.runs_dir / f"{run_id}.json"
         if not path.is_file() or path.resolve().parent != config.runs_dir.resolve():
             raise HTTPException(status_code=404, detail=f"run '{run_id}' not found")
-        return loop.load_run(path)
+        return runs.load_run(path)
 
     def openapi_with_event_schema() -> dict[str, Any]:
         if app.openapi_schema:
             return app.openapi_schema
-        schema = get_openapi(title=app.title, version=app.version, summary=app.summary, description=app.description, routes=app.routes, tags=app.openapi_tags)
+        schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            summary=app.summary,
+            description=app.description,
+            routes=app.routes,
+            tags=app.openapi_tags,
+        )
         event_schema = Event.model_json_schema(ref_template="#/components/schemas/{model}")
         defs = event_schema.pop("$defs", {})
         schema.setdefault("components", {}).setdefault("schemas", {}).update(defs)

@@ -1,6 +1,6 @@
 import json
 
-from prompt_coach import loop
+from prompt_coach import loop, runs
 from prompt_coach.config import Config
 from prompt_coach.types import Event, Task
 from tests.conftest import FakeModel
@@ -39,7 +39,9 @@ async def test_stops_at_max_rounds(fake: FakeModel, config: Config, support_task
     assert run.rounds[-1].next_prompt is None
 
 
-async def test_teacher_prompt_never_changes_and_student_prompt_does(fake: FakeModel, config: Config, support_task: Task) -> None:
+async def test_teacher_prompt_never_changes_and_student_prompt_does(
+    fake: FakeModel, config: Config, support_task: Task
+) -> None:
     config.loop.max_rounds = 3
     fake.student_scores = [{c.id: 0.5 for c in support_task.cases}]
     await collect(config, support_task)
@@ -62,7 +64,9 @@ async def test_best_round_is_highest_student_mean_not_last(fake: FakeModel, conf
     assert run.best_round.round == 2 and run.best_round.student_prompt.version == 2
 
 
-async def test_stop_rule_uses_teacher_average_not_a_single_lucky_round(fake: FakeModel, config: Config, support_task: Task) -> None:
+async def test_stop_rule_uses_teacher_average_not_a_single_lucky_round(
+    fake: FakeModel, config: Config, support_task: Task
+) -> None:
     """Teacher 0.9 then a bad 0.7 round: with the round-only rule the student at 0.65 would 'converge'."""
     ids = [c.id for c in support_task.cases]
     config.loop.max_rounds = 3
@@ -97,7 +101,7 @@ async def test_gap_cannot_close_before_min_rounds(fake: FakeModel, config: Confi
 
 
 def test_run_ids_are_unique_within_a_second() -> None:
-    ids = {loop.new_run_id() for _ in range(50)}
+    ids = {runs.new_run_id() for _ in range(50)}
     assert len(ids) == 50
 
 
@@ -107,8 +111,12 @@ async def test_event_order(fake: FakeModel, config: Config, support_task: Task) 
     n = len(support_task.cases) * 2
     expected = (
         ["run_started"]
-        + ["round_started"] + ["graded"] * n + ["round_finished", "prompt_proposed"]
-        + ["round_started"] + ["graded"] * n + ["round_finished"]
+        + ["round_started"]
+        + ["graded"] * n
+        + ["round_finished", "prompt_proposed"]
+        + ["round_started"]
+        + ["graded"] * n
+        + ["round_finished"]
         + ["run_finished"]
     )
     assert [e.type for e in events] == expected
@@ -127,7 +135,9 @@ async def test_coach_only_gets_failures(fake: FakeModel, config: Config, support
     assert f"### case {ids[1]}" not in coach_input and f"### case {ids[3]}" not in coach_input
 
 
-async def test_run_file_is_written_and_replays_to_the_same_events(fake: FakeModel, config: Config, support_task: Task) -> None:
+async def test_run_file_is_written_and_replays_to_the_same_events(
+    fake: FakeModel, config: Config, support_task: Task
+) -> None:
     fake.student_scores = [{c.id: 0.5 for c in support_task.cases}, {c.id: 0.9 for c in support_task.cases}]
     live = await collect(config, support_task)
     path = config.runs_dir / "test-run.json"
@@ -136,5 +146,5 @@ async def test_run_file_is_written_and_replays_to_the_same_events(fake: FakeMode
     assert data["id"] == "test-run" and len(data["rounds"]) == 2
     assert data["rounds"][0]["teacher"]["mean"] == 0.9
 
-    replayed = list(loop.replay(loop.load_run(path)))
+    replayed = list(runs.replay(runs.load_run(path)))
     assert [e.to_json() for e in replayed] == [e.to_json() for e in live]
