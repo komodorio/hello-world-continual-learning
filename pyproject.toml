@@ -1,7 +1,7 @@
 [project]
 name = "prompt-coach"
 version = "0.1.0"
-description = "Add your description here"
+description = "A hello-world for continual learning of LLM agents: a coach rewrites a weak agent's prompt until it catches up with a strong one."
 readme = "README.md"
 authors = [
     { name = "itiel", email = "itielshw@gmail.com" }
