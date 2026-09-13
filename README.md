@@ -1,6 +1,6 @@
-# prompt-coach
+# hello-world-continual-learning
 
-**A hello-world for continual learning of LLM agents.** A strong model and a weak model run the same
+**A hello-world for continual learning of LLM agents** (the tool inside is called `prompt-coach`). A strong model and a weak model run the same
 tiny support agent on the same four customer tickets. An evaluator grades every reply with one score.
 A coach reads the weak model's failures and rewrites only its prompt, and the loop repeats until the
 weak model is within a hair of the strong one.
@@ -175,7 +175,7 @@ You need Python 3.11+, [uv](https://docs.astral.sh/uv/), and an Anthropic API ke
 LiteLLM understands, if you swap the models).
 
 ```bash
-git clone https://github.com/komodorio/prompt-coach && cd prompt-coach
+git clone https://github.com/komodorio/hello-world-continual-learning && cd hello-world-continual-learning
 uv sync
 cp .env.example .env            # put ANTHROPIC_API_KEY=... in it
 # config.yaml is committed and already points at Sonnet (teacher, judge, coach) and Haiku (student)

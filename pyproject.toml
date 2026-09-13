@@ -32,8 +32,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/komodorio/prompt-coach"
-Issues = "https://github.com/komodorio/prompt-coach/issues"
+Homepage = "https://github.com/komodorio/hello-world-continual-learning"
+Issues = "https://github.com/komodorio/hello-world-continual-learning/issues"
 
 [project.scripts]
 prompt-coach = "prompt_coach.cli:app"
