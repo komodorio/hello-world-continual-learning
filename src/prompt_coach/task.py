@@ -23,7 +23,12 @@ def load_case(path: Path) -> Case:
     for field in ("input", "expected"):
         if not isinstance(data.get(field), str) or not data[field].strip():
             raise ValueError(f"{path}: missing or empty '{field}'")
-    return Case(id=str(data.get("id") or path.stem), input=data["input"], expected=data["expected"])
+    return Case(
+        id=str(data.get("id") or path.stem),
+        input=data["input"],
+        expected=data["expected"],
+        trap=str(data.get("trap") or "").strip(),
+    )
 
 
 def load_task(path: Path | str, case_ids: list[str] | None = None) -> Task:

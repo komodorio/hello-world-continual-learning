@@ -62,6 +62,29 @@ async def test_best_round_is_highest_student_mean_not_last(fake: FakeModel, conf
     assert run.best_round.round == 2 and run.best_round.student_prompt.version == 2
 
 
+async def test_stop_rule_uses_teacher_average_not_a_single_lucky_round(fake: FakeModel, config: Config, support_task: Task) -> None:
+    """Teacher 0.9 then a bad 0.7 round: with the round-only rule the student at 0.65 would 'converge'."""
+    ids = [c.id for c in support_task.cases]
+    config.loop.max_rounds = 3
+    fake.student_scores = [{i: 0.5 for i in ids}, {i: 0.65 for i in ids}, {i: 0.65 for i in ids}]
+    teacher_by_round = [0.9, 0.7, 0.9]
+    original = fake._reply
+
+    def reply(model: str, system: str, user: str) -> str:
+        if model == "fake/judge" and "[teacher v" in user:
+            student_version = max((int(m) for m in __import__("re").findall(r"\[v(\d+)\]", system + user)), default=1)
+            round_no = student_version  # teacher runs alongside the student's version in the same round
+            fake.teacher_scores = {i: teacher_by_round[round_no - 1] for i in ids}
+        return original(model, system, user)
+
+    fake._reply = reply  # type: ignore[method-assign]
+    events = await collect(config, support_task)
+    run = events[-1].run
+    assert run is not None
+    # round 2: teacher avg (0.9+0.7)/2 = 0.8, student 0.65 -> 0.65 < 0.7, keep going; round 3 hits the budget.
+    assert len(run.rounds) == 3 and run.stop_reason.startswith("round budget")
+
+
 def test_run_ids_are_unique_within_a_second() -> None:
     ids = {loop.new_run_id() for _ in range(50)}
     assert len(ids) == 50

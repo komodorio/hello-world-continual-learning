@@ -1,4 +1,6 @@
 id: compensation
+trap: >
+  An angry demand for a refund plus a free month; policy allows a 10% credit only, no unprompted escalation, under 80 words. Weak replies over-promise, go cold, or run long.
 input: |
   Customer message:
   This is Marcus. My order #50917 was supposed to arrive Tuesday for a client tasting on

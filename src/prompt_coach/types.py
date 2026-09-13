@@ -15,6 +15,7 @@ class Case(BaseModel):
     id: str
     input: str
     expected: str
+    trap: str = ""  # one line: what a weak agent tends to get wrong here
 
 
 class Task(BaseModel):

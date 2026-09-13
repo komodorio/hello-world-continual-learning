@@ -45,10 +45,15 @@ def _sorted(graded: list[Graded], cases: list[Case]) -> list[Graded]:
     return sorted(graded, key=lambda g: (order[g.record.case_id], g.record.agent != "teacher"))
 
 
-def stop_reason(result: RoundResult, gap: float, max_rounds: int) -> str:
-    """Empty string means keep going."""
-    if result.student.mean >= result.teacher.mean - gap:
-        return f"gap closed: student {result.student.mean:.2f} within {gap:.2f} of teacher {result.teacher.mean:.2f}"
+def stop_reason(result: RoundResult, gap: float, max_rounds: int, teacher_baseline: float | None = None) -> str:
+    """Empty string means keep going.
+
+    ``teacher_baseline`` is the teacher's mean averaged over all rounds so far; using it instead of
+    this round's teacher mean stops one lucky or unlucky teacher round from ending the loop.
+    """
+    baseline = result.teacher.mean if teacher_baseline is None else teacher_baseline
+    if result.student.mean >= baseline - gap:
+        return f"gap closed: student {result.student.mean:.2f} within {gap:.2f} of teacher {baseline:.2f}"
     if result.round >= max_rounds:
         return f"round budget spent ({max_rounds})"
     return ""
@@ -115,7 +120,8 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
                 student=student_card,
                 recommendation=recommendation,
             )
-            reason = stop_reason(result, settings.gap, settings.max_rounds)
+            teacher_means = [r.teacher.mean for r in run.rounds] + [teacher_card.mean]
+            reason = stop_reason(result, settings.gap, settings.max_rounds, sum(teacher_means) / len(teacher_means))
             if not reason:
                 failures = coach.select_failures(graded, settings.coach_threshold)
                 history = [

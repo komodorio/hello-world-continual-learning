@@ -1,4 +1,6 @@
 id: refund
+trap: >
+  Day 38 looks like a flat 'no' under the 30-day rule, but the defective-item guarantee applies; and the gift-card question is easy to skip.
 input: |
   Customer message:
   Hi, I'm Dana. I ordered a 1 kg bag of whole-bean Ethiopia Guji on the 3rd of last month

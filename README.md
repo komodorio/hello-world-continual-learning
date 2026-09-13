@@ -103,96 +103,105 @@ You need Python 3.11+, [uv](https://docs.astral.sh/uv/), and an Anthropic API ke
 LiteLLM understands, if you swap the models).
 
 ```bash
-git clone <this repo> && cd prompt-coach
+git clone https://github.com/itielshwartz/prompt-coach && cd prompt-coach
 uv sync
 cp .env.example .env            # put ANTHROPIC_API_KEY=... in it
 # config.yaml is committed and already points at Sonnet (teacher, judge, coach) and Haiku (student)
 
+uv run prompt-coach cases        # read the 4 tickets: the trap in each, and what a good reply must contain
 uv run prompt-coach run          # the whole loop, in the terminal
-uv run prompt-coach serve        # then open http://127.0.0.1:8000
+uv run prompt-coach serve        # then open http://127.0.0.1:8000  (API docs at /docs)
 ```
 
-`run` takes `--case <id>` (repeatable) to work on a subset, `--rounds N` and `--gap X` to change the
-stop rule. `serve` binds to 127.0.0.1 on purpose: anyone who can reach the page can start runs that cost
-tokens, so do not expose it without putting auth in front. It gives you the same loop in a page: pick cases, start, watch scores fill in per
-round, click through prompt versions with a diff, and try one case by hand in the panel at the bottom.
+The CLI is one command with five verbs — `cases`, `run`, `test`, `replay`, `serve` — and `--help` on
+each. `run` takes `--case <id>` (repeatable) to work on a subset, `--rounds N` and `--gap X` to change
+the stop rule. After every round it prints the score table, a bar chart of the student's mean per
+round next to the teacher's, the evaluator's brief, and the diff of the new prompt; at the end, the
+best-scoring prompt.
+
+`serve` gives you the same loop in a page: pick cases (each shows its trap and a link to what a good
+reply must contain), start, watch the four roles work, see the student's mean climb round by round,
+and click any score to read the reply, the judge's reason, and the teacher's reply to the same ticket.
+It binds to 127.0.0.1 on purpose: anyone who can reach the page can start runs that cost tokens, so
+do not expose it without auth in front. The backend is a small FastAPI app; `/docs` has the OpenAPI
+schema for every route, including the SSE event stream.
+
+![Click any score: the reply, the judge's reason, the teacher's reply, the ticket, and the checklist](docs/ui-detail.png)
 
 ## What you'll see
 
-This is a real run, trimmed. Round one, the same prompt on both models:
+This is one real run, five rounds, trimmed. Round one, the same prompt on both models:
 
 ```
       Round 1 · student prompt v1
 ┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┓
 ┃ case            ┃ teacher ┃ student ┃
 ┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━┩
-│ compensation    │    0.85 │    0.50 │
-│ missing-feature │    0.95 │    0.95 │
-│ refund          │    0.95 │    0.85 │
-│ two-questions   │    0.65 │    0.60 │
+│ compensation    │    0.85 │    0.60 │
+│ missing-feature │    0.90 │    0.55 │
+│ refund          │    1.00 │    0.85 │
+│ two-questions   │    0.95 │    0.75 │
 ├─────────────────┼─────────┼─────────┤
-│ mean            │    0.85 │    0.72 │
+│ mean            │    0.93 │    0.69 │
 └─────────────────┴─────────┴─────────┘
 ```
 
-The evaluator's recommendation to the coach, in its own words: *"The student consistently loses
-points on the same failure mode: word-limit discipline. In compensation and two-questions, the student
-blew past the stated cap (81 and 138 words) where the teacher stayed under … A second pattern is small
-policy-accuracy slips under pressure to be concise: in compensation the student invented a firm
-promise ('parcel will be replaced at no charge') instead of conditioning it on the 5-day
-investigation."*
+The evaluator's brief to the coach, in its own words: *"The student consistently identifies the right
+policy and mechanics but loses points through incomplete execution: leaving required elements
+implicit rather than stated … dropping specific required details (the 5-day investigation window, the
+60-day-and-7-day dual eligibility condition) … and in one case outright omitting the single most
+useful policy option (Saturday pickup) in favor of a useless alternative. … The teacher's edge isn't
+different policy knowledge — it's completeness and precision."*
 
-The coach's v2 tightened the word-limit line and added five short content rules. It helped on two
-tickets and *hurt* on one: with a new rule about not stating conditional outcomes as guaranteed, the
-student turned cautious and wrongly refused Dana's refund (0.20). That regression is the most
-instructive thing in the run: a prompt change is a hypothesis, and the judge is how you find out.
+Then the interesting part. The coach's v2 and v3 made the student *worse*: 0.69 → 0.66 → 0.59. Both
+versions added rules about checking eligibility dates, and Haiku over-applied them, telling Dana she
+was "beyond the 7-day window" and refusing a refund the policy clearly allows (refund fell to 0.35,
+then 0.10). The coach saw the two regressions in its history, threw the date-checking rule out and
+replaced it with "quote the policy's timing verbatim, don't derive new specifics". v4 took the student
+to 0.77 and v5 to 0.84, with refund back at 1.00 and 0.90.
 
-```
-      Round 2 · student prompt v2          Round 3 · student prompt v3
-┃ case            ┃ teacher ┃ student ┃    ┃ case            ┃ teacher ┃ student ┃
-│ compensation    │    0.90 │    0.85 │    │ compensation    │    0.90 │    0.85 │
-│ missing-feature │    0.70 │    0.55 │    │ missing-feature │    0.80 │    0.85 │
-│ refund          │    0.95 │    0.20 │    │ refund          │    0.95 │    0.50 │
-│ two-questions   │    0.95 │    0.95 │    │ two-questions   │    0.90 │    0.95 │
-│ mean            │    0.88 │    0.64 │    │ mean            │    0.89 │    0.79 │
+![Terminal output at the end of the run: the round table and the student's progress bar chart](docs/cli.png)
 
-teacher 0.87 (avg over rounds) · student 0.72 → 0.64 → 0.79
-gap closed: student 0.79 within 0.10 of teacher 0.89
-```
+Round 5 also shows why the stop rule compares the student to the teacher's *average* over rounds
+rather than to the current round: the teacher itself had a bad round (0.77), and against that alone
+the student would have "won" by luck. Against the 0.90 average it closed the gap on merit.
 
-The coach saw the v2 regression in its history, kept what worked and replaced the rest. The CLI
-reports the *best-scoring* version, not the last one tried, since a later prompt is not always
-better. The final prompt is general; nothing in it names a customer, a date, or a policy figure:
+A prompt change is a hypothesis. The judge is how you find out. Without a scored loop you would have
+shipped v2 and called it an improvement.
+
+The CLI reports the *best-scoring* version, not the last one tried, since a later prompt is not always
+better. Here they coincide. The final prompt is general — nothing in it names a customer, a date, or a
+policy figure — and it is shorter than the two versions that failed:
 
 ```
-You are a support agent for Beanhouse, a small online coffee roaster.
-Using the policy snippet provided with each message, reply to the customer.
+You are a support agent for Beanhouse, a small online coffee roaster. Using the policy
+snippet provided with each message, reply to the customer.
+
+State only what the policy actually says. When a rule names specific days, hours, or
+cutoffs, repeat them in the policy's own terms rather than calculating a new date or time
+yourself. If you must combine two policy facts to answer, only do so when the result is
+certain and simple - otherwise state each fact plainly and let the customer work out the
+rest, rather than inventing a specific figure.
+
+Answer every question the customer asked. When declining something, name the nearest
+option the policy does allow, described exactly as the policy describes it - exact figures
+and conditions, never paraphrases or approximations.
+
+If the customer expresses frustration, urgency, or names a specific problem, open with one
+short phrase acknowledging that specific thing, not a generic pleasantry.
+
+Word limits are firm. Keep sentences tight; if a reply would run long, cut background or
+repeated explanation first, never a required fact or answer.
 
 Output format:
 - Plain text only: no markdown, no headings, no bullet points, no subject line.
 - Open with a greeting that uses the customer's first name.
 - Sign off with exactly: "Maya, Beanhouse Support".
-- Stay under 120 words, unless the ticket or policy states a tighter limit -
-  then use that instead, cutting pleasantries first.
-
-Content rules:
-- Answer every question the customer asked, briefly.
-- Before deciding, find every number, date, window, and option the policy states that
-  relates to this ticket - list them to yourself mentally, then use only those. Never
-  calculate, guess, or paraphrase a date or figure the policy doesn't give directly.
-- If a policy gives more than one time window (e.g. one measured from delivery, another
-  from opening or reporting), check which window actually governs the customer's facts
-  before applying it - do not merge separate windows into one.
-- Mention every concrete alternative, option, or step the policy explicitly offers
-  (pickup hours, required documentation, choice between remedies, processing times).
-- State only what the policy says; describe conditional outcomes (investigation,
-  approval, review) as conditional, not guaranteed.
-- Acknowledge repeat problems, timing, or stated deadlines in one short sentence each.
-- When refusing something, name the nearest thing the policy does allow.
+- Stay under 120 words, or under the tighter limit if the ticket or policy specifies one.
 ```
 
-Runs differ. Another run from the web page went 0.76 → 0.60 → 0.91 against a teacher at 0.96; one
-went 0.75 → 0.86 and stopped after two rounds. See "Known limits" for why.
+Runs differ. Other runs went 0.72 → 0.64 → 0.79 in three rounds, and 0.76 → 0.60 → 0.91 against a
+teacher at 0.96. See "Known limits" for why.
 
 ## Swapping models
 
@@ -247,7 +256,8 @@ case and grades it, with an optional prompt file and model override:
 uv run prompt-coach test --case refund
 uv run prompt-coach test --case refund --agent teacher
 uv run prompt-coach test --case refund --prompt my_prompt.md --model openrouter/moonshotai/kimi-k2
-uv run prompt-coach replay runs/20260913-134841.json     # re-render a saved run, no tokens
+uv run prompt-coach replay runs/<id>.json                 # re-render a saved run, no tokens
+uv run prompt-coach cases --case refund --full            # one ticket in full: trap, message, policy, checklist
 uv run python -m prompt_coach.smoke                      # raw replies from both agents, no grading
 ```
 
@@ -264,10 +274,13 @@ cents. `runs/` keeps everything, and `replay` is free.
 ## Known limits
 
 **Four cases.** With four scores, one judge wobble of 0.1 on one case moves the mean by 0.025, and
-one real slip by the *teacher* moves the target the student is chasing. The stop rule `gap = 0.1` is
-deliberately wider than that noise, but you will see the gap close in one round some of the time and
-in four rounds other times. More cases smooth this; we kept four so a round stays cheap and the whole
-run fits on one screen.
+one real slip by the *teacher* moves the target the student is chasing. Two guards: the stop rule
+compares the student to the teacher's mean *averaged over all rounds so far*, not to one lucky
+round, and `gap = 0.1` is deliberately wider than the noise. You will still see the gap close in
+two rounds some of the time and in four others. More cases smooth this; we kept four so a round stays
+cheap and the whole run fits on one screen. The mean can also hide a bad case: a student at 0.79
+overall may still be at 0.50 on one ticket, which is why the per-case grid, not the mean, is the
+thing to read.
 
 **Judge noise.** The score is a single number from an LLM. It is anchored to an explicit checklist
 rather than taste, and the same reply will usually land within ±0.1, but it is not a unit test.
@@ -310,8 +323,8 @@ src/prompt_coach/
   evaluator.py  grade(record, case) -> Verdict;  recommend(teacher, student) -> str
   coach.py      propose(...) -> PromptVersion v+1
   loop.py       run_loop(config, task) -> AsyncIterator[Event];  save/load/replay runs
-  cli.py        prompt-coach run | test | replay | serve
-  server.py     FastAPI: / /cases /start /test /events /runs /runs/{id}
+  cli.py        prompt-coach cases | run | test | replay | serve
+  server.py     FastAPI: / /cases /start /test /events /runs /runs/{id}  (OpenAPI at /docs)
   static/index.html   the page; vanilla JS, no build step
   prompts/{evaluator,coach}.md
   smoke.py      both agents on all cases, replies only

@@ -63,7 +63,7 @@ class FakeModel:
             role = model.split("/")[1]
             marker = re.search(r"\[v(\d+)\]", system)
             version = int(marker.group(1)) if marker else 1
-            return f"[{role} v{version}] Hi there, here is my reply.\n\nMaya, Beanhouse Support"
+            return f"[{role} v{version}] Hi there, here is my reply."
         if model == "fake/judge":
             if "compare two AI support agents" in system:
                 return self.recommendation

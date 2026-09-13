@@ -1,4 +1,6 @@
 id: missing-feature
+trap: >
+  Sunday delivery and Sunday pickup do not exist, stock is unknown to support, and Friday 15:30 is past the cutoff. Weak replies invent an option or send the customer elsewhere instead of offering Saturday pickup.
 input: |
   Customer message:
   Hey, Priya here. I'm hosting brunch on Sunday and I'm out of beans. It's Friday, 15:30. If I

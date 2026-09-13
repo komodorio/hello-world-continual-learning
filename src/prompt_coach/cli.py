@@ -18,7 +18,7 @@ from prompt_coach import evaluator, loop
 from prompt_coach.agent import Agent
 from prompt_coach.config import Config, load_config
 from prompt_coach.task import load_task
-from prompt_coach.types import AgentName, Event, RoundResult
+from prompt_coach.types import AgentName, Event, RoundResult, RunRecord
 
 app = typer.Typer(help="A hello-world for continual learning: a coach rewrites a weak agent's prompt until it catches up.")
 console = Console()
@@ -49,6 +49,36 @@ def prompt_diff(old: str, new: str) -> Text:
     return text
 
 
+def progress_panel(run: RunRecord, gap: float) -> Panel:
+    """The student's trajectory as one bar per round, next to the teacher's. Readable at a glance."""
+    rounds = sorted(run.rounds, key=lambda r: r.round)
+    width = 20
+    bar = lambda v: "█" * round(v * width) + "░" * (width - round(v * width))  # noqa: E731
+    text = Text()
+    for i, r in enumerate(rounds):
+        label = f"round {r.round} · v{r.student_prompt.version}"
+        text.append(f"{label:<14}", style="bold")
+        text.append("teacher ", style="dim")
+        text.append(bar(r.teacher.mean), style="white")
+        text.append(f" {r.teacher.mean:.2f}\n")
+        text.append(" " * 14)
+        text.append("student ", style="dim")
+        text.append(bar(r.student.mean), style="yellow")
+        text.append(f" {r.student.mean:.2f}", style=_score_style(r.student.mean))
+        if i > 0:
+            d = r.student.mean - rounds[i - 1].student.mean
+            text.append(f"  {d:+.2f}", style="green" if d > 0 else "red" if d < 0 else "dim")
+        text.append("\n" if i == len(rounds) - 1 else "\n\n")
+    if rounds:
+        trend = " → ".join(f"{r.student.mean:.2f}" for r in rounds)
+        teacher_avg = sum(r.teacher.mean for r in rounds) / len(rounds)
+        text.append(f"\nstudent {trend}\nteacher avg {teacher_avg:.2f} · target ≥ {max(0.0, teacher_avg - gap):.2f} (teacher avg − gap {gap})", style="dim")
+        best = run.best_round
+        if best is not None:
+            text.append(f"\nbest so far: v{best.student_prompt.version} at {best.student.mean:.2f}", style="dim")
+    return Panel(text, title="student progress over time", border_style="yellow")
+
+
 def round_table(result: RoundResult) -> Table:
     table = Table(title=f"Round {result.round} · student prompt v{result.student_prompt.version}", show_footer=True)
     table.add_column("case", footer="mean")
@@ -66,10 +96,12 @@ class Reporter:
         self.console = console
         self.verbose = verbose
         self.previous_prompt = ""
+        self.run: RunRecord | None = None  # accumulates rounds so progress can be drawn after each one
 
     def handle(self, event: Event) -> None:
         if event.type == "run_started" and event.run:
             run = event.run
+            self.run = run.model_copy(deep=True)
             self.console.print(
                 Panel(
                     f"task [bold]{run.task}[/] · cases {', '.join(run.case_ids)}\n"
@@ -92,6 +124,10 @@ class Reporter:
             )
         elif event.type == "round_finished" and event.result:
             self.console.print(round_table(event.result))
+            if self.run is not None:
+                self.run.rounds = [r for r in self.run.rounds if r.round != event.result.round] + [event.result]
+                if len(self.run.rounds) > 1:
+                    self.console.print(progress_panel(self.run, self.run.gap))
             if event.result.recommendation:
                 self.console.print(Panel(event.result.recommendation, title="evaluator's recommendation", border_style="dim"))
         elif event.type == "prompt_proposed" and event.prompt:
@@ -105,15 +141,8 @@ class Reporter:
         elif event.type == "run_finished" and event.run:
             run = event.run
             if run.rounds:
-                trend = " → ".join(f"{r.student.mean:.2f}" for r in run.rounds)
-                teacher_mean = sum(r.teacher.mean for r in run.rounds) / len(run.rounds)
-                self.console.print(
-                    Panel(
-                        f"teacher {teacher_mean:.2f} (avg over rounds) · student {trend}\n{run.stop_reason}",
-                        title="result",
-                        border_style="blue",
-                    )
-                )
+                self.console.print(progress_panel(run, run.gap))
+                self.console.print(Panel(run.stop_reason, title="result", border_style="blue"))
                 best = run.best_round
                 assert best is not None
                 last = run.rounds[-1]
@@ -125,7 +154,7 @@ class Reporter:
                         border_style="green",
                     )
                 )
-            self.console.print(f"[dim]saved to runs/{run.id}.json[/]")
+            self.console.print(f"[dim]saved as {run.id}.json in the runs folder · replay with: prompt-coach replay <runs_dir>/{run.id}.json[/]")
         elif event.type == "error":
             self.console.print(f"[bold red]error[/] {event.message}")
         elif event.type == "log":
@@ -188,6 +217,29 @@ def test(
         raise typer.BadParameter("--agent must be 'teacher' or 'student'")
     cfg = load_config(config)
     asyncio.run(_test(cfg, task or cfg.task, case, agent, prompt, model))  # type: ignore[arg-type]
+
+
+@app.command()
+def cases(
+    task: Annotated[Optional[Path], typer.Option("--task", help="Task folder (default: from config)")] = None,
+    case: CaseOpt = None,
+    full: Annotated[bool, typer.Option("--full", help="Also print each case's full input (message + policy)")] = False,
+    config: ConfigOpt = Path("config.yaml"),
+) -> None:
+    """List the cases: the trap in each ticket and what a good reply must contain."""
+    cfg = load_config(config)
+    loaded = load_task(task or cfg.task, case)
+    console.print(Panel(loaded.initial_prompt, title=f"task [bold]{loaded.name}[/] · prompt v1 (both agents start here)", border_style="dim"))
+    for c in loaded.cases:
+        body = Text()
+        if c.trap:
+            body.append("The trap: ", style="bold red")
+            body.append(c.trap + "\n\n")
+        if full:
+            body.append(c.input.strip() + "\n\n", style="dim")
+        body.append("A good reply:\n", style="bold green")
+        body.append(c.expected.strip())
+        console.print(Panel(body, title=f"[bold]{c.id}[/]", border_style="blue"))
 
 
 @app.command()

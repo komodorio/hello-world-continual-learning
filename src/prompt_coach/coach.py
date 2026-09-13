@@ -14,6 +14,11 @@ class CoachOutputError(ModelOutputError):
     """The coach did not return the JSON object we asked for."""
 
 
+# The coach prompt asks for under 220 words; this is the hard ceiling we enforce with one retry.
+# Observed: prompts that grew past ~350 words made the student worse every round.
+MAX_PROMPT_WORDS = 300
+
+
 def select_failures(graded: list[Graded], threshold: float) -> list[Graded]:
     """The student runs the coach is allowed to see: strictly below the threshold."""
     return [g for g in graded if g.record.agent == "student" and g.verdict.score < threshold]
@@ -78,8 +83,17 @@ async def propose(
     see which changes helped and which hurt.
     """
     user = _coach_input(teacher_prompt, student_prompt, failures, case_inputs, recommendation, history or [])
-    try:
-        data = await models.complete_json(model, load_prompt("coach"), user, max_tokens=6000)
-    except ModelOutputError as exc:
-        raise CoachOutputError(str(exc)) from exc
-    return proposal_from(data, student_prompt.version)
+    system = load_prompt("coach")
+    for attempt in range(2):
+        try:
+            data = await models.complete_json(model, system, user, max_tokens=6000)
+        except ModelOutputError as exc:
+            raise CoachOutputError(str(exc)) from exc
+        proposal = proposal_from(data, student_prompt.version)
+        words = len(proposal.text.split())
+        if words <= MAX_PROMPT_WORDS:
+            return proposal
+        if attempt == 0:
+            # Long prompts are exactly what makes the student worse; ask once more, then give up.
+            user += f"\n\n## Correction\nYour previous answer was {words} words. The whole prompt must be under {MAX_PROMPT_WORDS} words. Cut, do not compress into denser sentences."
+    raise CoachOutputError(f"coach kept returning prompts over {MAX_PROMPT_WORDS} words ({words} words)")

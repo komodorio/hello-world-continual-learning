@@ -1,4 +1,6 @@
 id: two-questions
+trap: >
+  Two requests in one message, plus a 3-day notice rule that means Tom is still charged once more. Weak replies answer one request or promise no further charge.
 input: |
   Customer message:
   Hello, this is Tom, writing on the 19th. Two things. First, I want to cancel my monthly

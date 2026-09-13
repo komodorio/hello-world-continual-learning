@@ -32,6 +32,15 @@ async def read_sse(client: httpx.AsyncClient) -> list[tuple[str, dict]]:
     return events
 
 
+async def test_openapi_documents_every_route_and_the_event_schema(client: httpx.AsyncClient) -> None:
+    schema = (await client.get("/openapi.json")).json()
+    assert set(schema["paths"]) == {"/cases", "/start", "/test", "/events", "/runs", "/runs/{run_id}"}
+    assert "text/event-stream" in schema["paths"]["/events"]["get"]["responses"]["200"]["content"]
+    for name in ("Event", "RunRecord", "RoundResult", "Graded", "Verdict", "PromptVersion", "Case"):
+        assert name in schema["components"]["schemas"], name
+    assert (await client.get("/docs")).status_code == 200
+
+
 async def test_index_and_cases(client: httpx.AsyncClient) -> None:
     assert (await client.get("/")).status_code == 200
     body = (await client.get("/cases")).json()

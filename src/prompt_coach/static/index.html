@@ -31,6 +31,8 @@
   header .brand i { width:10px; height:10px; border-radius:50%; background:var(--fog); display:inline-block; }
   header .tagline { color:var(--muted); font-size:13px; }
   header .spacer { flex:1; }
+  a.pill { text-decoration:none; }
+  a.pill:hover { background:var(--surface); }
   .pill { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 11px; border-radius:9999px; border:1px solid var(--line2); background:transparent; color:var(--text2); font-size:12.5px; white-space:nowrap; }
   .pill.live { border-color:rgba(76,195,138,.5); color:var(--good); }
   .pill.live::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--good); animation:blink 1.2s infinite; }
@@ -55,6 +57,9 @@
   .case input { margin-top:3px; accent-color:var(--fog); }
   .case b { font-weight:500; font-size:13px; display:block; }
   .case small { color:var(--muted); display:block; line-height:1.35; margin-top:1px; }
+  .linkish { all:unset; display:inline-block; margin-top:4px; font-size:11.5px; color:var(--text2); text-decoration:underline; text-decoration-color:var(--line2); cursor:pointer; }
+  .linkish:hover { color:var(--text); }
+  .linkish:focus-visible { outline:2px solid var(--fog); outline-offset:2px; }
   .controls { display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap; }
   .controls label { font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
   input[type=number], select, textarea, input[type=text] { background:var(--canvas); color:var(--text); border:1px solid var(--line2); border-radius:6px; padding:5px 8px; font:inherit; letter-spacing:inherit; }
@@ -170,6 +175,7 @@
     <div class="brand"><i></i>prompt-coach</div>
     <div class="tagline">a coach rewrites a weak agent's prompt until it catches up with a strong one</div>
     <div class="spacer"></div>
+    <a class="pill" href="/docs" target="_blank" rel="noopener" title="OpenAPI docs">API</a>
     <span class="pill" id="status" role="status" aria-live="polite">idle</span>
   </header>
 
@@ -264,9 +270,11 @@
   <div class="head"><div><h3 id="shTitle"></h3><div class="meta" id="shMeta"></div></div><button class="x" id="shClose" aria-label="close">×</button></div>
   <div class="score" id="shScore"></div>
   <div class="reason" id="shReason"></div>
-  <h4>Reply</h4><pre id="shReply"></pre>
+  <div id="shReplyBlock"><h4 id="shReplyHead">Reply</h4><pre id="shReply"></pre></div>
+  <div id="shCompare" hidden><h4>Teacher's reply, same round <span class="muted" id="shCompareScore"></span></h4><pre id="shTeacherReply"></pre></div>
+  <div id="shTrapBlock" hidden><h4>The trap</h4><div class="reason" id="shTrap"></div></div>
   <h4>What the agent saw</h4><pre id="shInput"></pre>
-  <h4>What the judge checked against</h4><pre id="shExpected"></pre>
+  <h4>What a good reply must contain (the judge's checklist)</h4><pre id="shExpected"></pre>
 </aside>
 
 <script>
@@ -300,7 +308,8 @@ async function boot() {
   } catch (e) { setStatus('cannot reach server', 'err'); return; }
   $('models').innerHTML = `teacher <span class="t mono">${esc(meta.models.teacher)}</span><br>student <span class="s mono">${esc(meta.models.student)}</span><br>evaluator <span class="mono">${esc(meta.models.evaluator)}</span><br>coach <span class="mono">${esc(meta.models.coach)}</span>`;
   $('rounds').value = meta.loop.max_rounds; $('gap').value = meta.loop.gap;
-  $('cases').innerHTML = meta.cases.map(c => `<label class="case"><input type="checkbox" value="${esc(c.id)}" checked><span><b>${esc(c.id)}</b><small>${esc(firstLine(c.input))}</small></span></label>`).join('');
+  $('cases').innerHTML = meta.cases.map(c => `<label class="case"><input type="checkbox" value="${esc(c.id)}" checked><span><b>${esc(c.id)}</b><small>${esc(c.trap || firstLine(c.input))}</small><button type="button" class="linkish" data-case="${esc(c.id)}">what does a good reply look like?</button></span></label>`).join('');
+  $('cases').querySelectorAll('button.linkish').forEach(b => { b.onclick = (e) => { e.preventDefault(); openCase(b.dataset.case); }; });
   $('testCase').innerHTML = meta.cases.map(c => `<option>${esc(c.id)}</option>`).join('');
   await loadRuns();
   renderAll();
@@ -585,7 +594,8 @@ function openCell(round, agent, caseId, source) {
   const run = viewed(); if (!run) return;
   const r = sortedRounds(run).find(x => x.round === round);
   const p = pending()[round];
-  const g = r ? r.graded.find(x => x.record.agent === agent && x.record.case_id === caseId) : (p ? p.graded.find(x => x.record.agent === agent && x.record.case_id === caseId) : null);
+  const pool = r ? r.graded : (p ? p.graded : []);
+  const g = pool.find(x => x.record.agent === agent && x.record.case_id === caseId);
   if (!g) return;
   selectedCell = { round, agent, case: caseId }; renderGrid(run);
   lastFocus = source || document.activeElement;
@@ -594,12 +604,32 @@ function openCell(round, agent, caseId, source) {
   $('shMeta').innerHTML = `round ${round} · prompt v${g.record.prompt_version} · <span class="mono">${esc(g.record.model)}</span> · ${g.record.reply.split(/\s+/).length} words · ${g.record.latency_s}s`;
   $('shScore').innerHTML = `<span class="${cls(g.verdict.score)} mono">${f2(g.verdict.score)}</span>`;
   $('shReason').textContent = g.verdict.reason;
+  $('shReplyBlock').hidden = false;
+  $('shReplyHead').textContent = `${agent === 'teacher' ? 'Teacher' : 'Student'}'s reply`;
   $('shReply').textContent = g.record.reply;
+  const other = agent === 'student' ? pool.find(x => x.record.agent === 'teacher' && x.record.case_id === caseId) : null;
+  $('shCompare').hidden = !other;
+  if (other) { $('shTeacherReply').textContent = other.record.reply; $('shCompareScore').innerHTML = `scored <span class="${cls(other.verdict.score)} mono">${f2(other.verdict.score)}</span>`; }
+  $('shTrapBlock').hidden = !c.trap; $('shTrap').textContent = c.trap || '';
   $('shInput').textContent = c.input || '(case not in the current task folder)';
   $('shExpected').textContent = c.expected || '';
   $('sheet').hidden = false;
   $('shClose').focus();
 }
+
+// The same sheet, for a case on its own: trap, input, and the checklist a good reply must satisfy.
+function openCase(caseId) {
+  const c = meta.cases.find(x => x.id === caseId); if (!c) return;
+  lastFocus = document.activeElement;
+  $('shTitle').textContent = caseId;
+  $('shMeta').textContent = 'the ticket, its trap, and what the judge checks against';
+  $('shScore').innerHTML = ''; $('shReason').textContent = '';
+  $('shReplyBlock').hidden = true; $('shCompare').hidden = true;
+  $('shTrapBlock').hidden = !c.trap; $('shTrap').textContent = c.trap || '';
+  $('shInput').textContent = c.input; $('shExpected').textContent = c.expected;
+  $('sheet').hidden = false; $('shClose').focus();
+}
+
 function closeSheet() {
   if ($('sheet').hidden) return;
   $('sheet').hidden = true;
