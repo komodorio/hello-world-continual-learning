@@ -29,17 +29,25 @@ class Config(BaseModel):
     loop: LoopSettings = LoopSettings()
 
 
-def load_config(path: Path | str = "config.yaml", env_file: Path | str = ".env") -> Config:
+def load_config(path: Path | str = "config.yaml", env_file: Path | str | None = None) -> Config:
     """Read the YAML config and load API keys from the env file into the process env.
 
+    Relative paths (``task``, ``runs_dir``, and the default ``.env``) resolve against the config
+    file's directory, so ``--config elsewhere/config.yaml`` works from any working directory.
     Keys are never returned or printed; providers read them from ``os.environ``.
     """
-    load_dotenv(env_file)
     config_path = Path(path)
     if not config_path.exists():
         raise FileNotFoundError(f"{config_path} not found; copy config.example.yaml to {config_path}")
+    base = config_path.resolve().parent
+    load_dotenv(Path(env_file) if env_file is not None else base / ".env")
     with config_path.open() as f:
         raw = yaml.safe_load(f)
     if not isinstance(raw, dict):
         raise ValueError(f"{config_path} must contain a mapping at the top level")
-    return Config.model_validate(raw)
+    config = Config.model_validate(raw)
+    if not config.task.is_absolute():
+        config.task = base / config.task
+    if not config.runs_dir.is_absolute():
+        config.runs_dir = base / config.runs_dir
+    return config

@@ -26,6 +26,24 @@ def test_case_filter_rejects_unknown_id() -> None:
         load_task(SUPPORT_TASK, ["refund", "nope"])
 
 
+def test_case_filter_rejects_duplicates() -> None:
+    with pytest.raises(ValueError, match="duplicate"):
+        load_task(SUPPORT_TASK, ["refund", "refund"])
+
+
+def test_load_config_resolves_paths_against_config_dir(tmp_path: Path) -> None:
+    from prompt_coach.config import load_config
+
+    sub = tmp_path / "elsewhere"
+    sub.mkdir()
+    (sub / "config.yaml").write_text(
+        "models: {teacher: a, student: b, evaluator: c, coach: d}\ntask: my-task\nruns_dir: out\n"
+    )
+    cfg = load_config(sub / "config.yaml", env_file=tmp_path / "no-such.env")
+    assert cfg.task == sub.resolve() / "my-task"
+    assert cfg.runs_dir == sub.resolve() / "out"
+
+
 @pytest.mark.parametrize("missing", ["input", "expected"])
 def test_rejects_case_missing_required_field(tmp_path: Path, missing: str) -> None:
     (tmp_path / "task.yaml").write_text("name: t\nprompt: do the thing\n")

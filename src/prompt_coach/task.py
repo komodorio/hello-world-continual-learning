@@ -46,6 +46,8 @@ def load_task(path: Path | str, case_ids: list[str] | None = None) -> Task:
         seen.add(case.id)
 
     if case_ids:
+        if len(set(case_ids)) != len(case_ids):
+            raise ValueError(f"duplicate case id(s) in selection: {case_ids}")
         by_id = {c.id: c for c in cases}
         unknown = [cid for cid in case_ids if cid not in by_id]
         if unknown:

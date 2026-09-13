@@ -113,7 +113,8 @@ uv run prompt-coach serve        # then open http://127.0.0.1:8000
 ```
 
 `run` takes `--case <id>` (repeatable) to work on a subset, `--rounds N` and `--gap X` to change the
-stop rule. `serve` gives you the same loop in a page: pick cases, start, watch scores fill in per
+stop rule. `serve` binds to 127.0.0.1 on purpose: anyone who can reach the page can start runs that cost
+tokens, so do not expose it without putting auth in front. It gives you the same loop in a page: pick cases, start, watch scores fill in per
 round, click through prompt versions with a diff, and try one case by hand in the panel at the bottom.
 
 ## What you'll see
@@ -159,8 +160,9 @@ teacher 0.87 (avg over rounds) · student 0.72 → 0.64 → 0.79
 gap closed: student 0.79 within 0.10 of teacher 0.89
 ```
 
-The coach saw the v2 regression in its history, kept what worked and replaced the rest. The final
-prompt is general; nothing in it names a customer, a date, or a policy figure:
+The coach saw the v2 regression in its history, kept what worked and replaced the rest. The CLI
+reports the *best-scoring* version, not the last one tried, since a later prompt is not always
+better. The final prompt is general; nothing in it names a customer, a date, or a policy figure:
 
 ```
 You are a support agent for Beanhouse, a small online coffee roaster.
@@ -254,8 +256,8 @@ coached prompt.
 
 ## Cost per loop
 
-One round is 4 cases × 2 agents = 8 agent calls, 8 judge calls, 1 recommendation and 1 coach call:
-18 calls. Roughly 25–35k input tokens and 4–6k output tokens per round, mostly on the judge and
+One round is 4 cases × 2 agents = 8 agent calls, 8 judge calls, 1 recommendation and, unless it is
+the last round, 1 coach call: up to 18 calls. Roughly 25–35k input tokens and 4–6k output tokens per round, mostly on the judge and
 coach. A 3-round run is under 60 calls; at Sonnet-class prices that is on the order of a few tens of
 cents. `runs/` keeps everything, and `replay` is free.
 

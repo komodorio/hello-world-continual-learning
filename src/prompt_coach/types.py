@@ -104,6 +104,13 @@ class RunRecord(BaseModel):
     rounds: list[RoundResult] = Field(default_factory=list)
     stop_reason: str = ""
 
+    @property
+    def best_round(self) -> RoundResult | None:
+        """The round whose student prompt scored highest; a later version is not always better."""
+        if not self.rounds:
+            return None
+        return max(self.rounds, key=lambda r: (r.student.mean, r.round))
+
 
 EventType = Literal[
     "run_started",

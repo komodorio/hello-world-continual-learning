@@ -23,9 +23,12 @@ log = logging.getLogger("prompt_coach.server")
 STATIC_DIR = Path(__file__).parent / "static"
 
 
+MAX_ROUNDS = 10  # every round costs real tokens; the page must not be able to ask for 1000
+
+
 class StartRequest(BaseModel):
     cases: list[str] | None = None
-    rounds: int | None = Field(default=None, ge=1)
+    rounds: int | None = Field(default=None, ge=1, le=MAX_ROUNDS)
     gap: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
@@ -141,6 +144,8 @@ def create_app(config: Config) -> FastAPI:
         case = task.cases[0]
         prompt = request.prompt.strip() if request.prompt and request.prompt.strip() else task.initial_prompt
         model = request.model or getattr(config.models, request.agent)
+        if model not in config.models.model_dump().values():
+            raise HTTPException(status_code=400, detail=f"model '{model}' is not one of the configured models")
         record = await Agent(request.agent, model, prompt).run(case)
         verdict = await evaluator.grade(record, case, task=task, model=config.models.evaluator)
         return {"record": record.model_dump(), "verdict": verdict.model_dump()}

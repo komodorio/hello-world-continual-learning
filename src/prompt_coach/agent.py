@@ -40,8 +40,10 @@ class Agent:
 
     async def run(self, case: Case) -> Record:
         """Run the agent on one case in a fresh session and return its reply."""
+        # One neutral ADK name for both agents: ADK appends 'Your internal name is "<name>"' to the
+        # system prompt, and teacher and student must run byte-identical instructions on round 1.
         llm_agent = LlmAgent(
-            name=self.name,
+            name="support_agent",
             model=LiteLlm(model=self.model, llm_client=_Client()),
             instruction=self.prompt,
         )

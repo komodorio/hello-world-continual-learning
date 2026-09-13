@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import secrets
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,7 +25,8 @@ from prompt_coach.types import (
 
 
 def new_run_id() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    """Sortable timestamp plus a short random suffix so two runs in the same second never collide."""
+    return f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(2)}"
 
 
 async def _run_and_grade(agent: Agent, case: Case, task: Task, judge_model: str) -> Graded:

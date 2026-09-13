@@ -44,10 +44,27 @@ async def test_teacher_prompt_never_changes_and_student_prompt_does(fake: FakeMo
     fake.student_scores = [{c.id: 0.5 for c in support_task.cases}]
     await collect(config, support_task)
     teacher_prompts = {c["system"] for c in fake.calls if c["model"] == "fake/teacher"}
-    student_prompts = {c["system"] for c in fake.calls if c["model"] == "fake/student"}
-    # ADK appends its own agent-identity line, so compare the prefix.
-    assert len(teacher_prompts) == 1 and teacher_prompts.pop().startswith(support_task.initial_prompt)
-    assert len(student_prompts) == 3
+    student_prompts = [c["system"] for c in fake.calls if c["model"] == "fake/student"]
+    assert len(teacher_prompts) == 1
+    assert len(set(student_prompts)) == 3
+    # Round 1: teacher and student must receive byte-identical system prompts (ADK adds an
+    # identity line, so the ADK agent name has to be the same for both).
+    round1_student = student_prompts[: len(support_task.cases)]
+    assert set(round1_student) == teacher_prompts
+
+
+async def test_best_round_is_highest_student_mean_not_last(fake: FakeModel, config: Config, support_task: Task) -> None:
+    config.loop.max_rounds = 3
+    ids = [c.id for c in support_task.cases]
+    fake.student_scores = [{i: 0.6 for i in ids}, {i: 0.7 for i in ids}, {i: 0.5 for i in ids}]
+    run = (await collect(config, support_task))[-1].run
+    assert run is not None and run.best_round is not None
+    assert run.best_round.round == 2 and run.best_round.student_prompt.version == 2
+
+
+def test_run_ids_are_unique_within_a_second() -> None:
+    ids = {loop.new_run_id() for _ in range(50)}
+    assert len(ids) == 50
 
 
 async def test_event_order(fake: FakeModel, config: Config, support_task: Task) -> None:

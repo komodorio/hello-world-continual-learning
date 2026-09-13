@@ -114,8 +114,17 @@ class Reporter:
                         border_style="blue",
                     )
                 )
-                final = run.rounds[-1].student_prompt
-                self.console.print(Panel(final.text, title=f"final student prompt v{final.version}", border_style="green"))
+                best = run.best_round
+                assert best is not None
+                last = run.rounds[-1]
+                note = "" if best.round == last.round else f" (last tried: v{last.student_prompt.version} at {last.student.mean:.2f})"
+                self.console.print(
+                    Panel(
+                        best.student_prompt.text,
+                        title=f"best student prompt v{best.student_prompt.version} · mean {best.student.mean:.2f}{note}",
+                        border_style="green",
+                    )
+                )
             self.console.print(f"[dim]saved to runs/{run.id}.json[/]")
         elif event.type == "error":
             self.console.print(f"[bold red]error[/] {event.message}")
