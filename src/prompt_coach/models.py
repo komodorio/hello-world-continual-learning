@@ -6,11 +6,45 @@ Every model call in the project (agents via ADK, evaluator, coach) goes through
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import litellm
 
 Message = dict[str, Any]
+
+
+class ModelOutputError(ValueError):
+    """A model did not return the structured output we asked for."""
+
+
+def extract_json_object(text: str) -> dict[str, Any]:
+    """Pull the single JSON object out of a model reply.
+
+    Tolerates code fences, text after the object, and one missing closing brace. Nothing else.
+    """
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = stripped.strip("`")
+        if stripped.startswith("json"):
+            stripped = stripped[4:]
+    start = stripped.find("{")
+    if start == -1:
+        raise ModelOutputError(f"no JSON object in model output: {text[:200]!r}")
+    candidate = stripped[start:]
+    decoder = json.JSONDecoder()
+    try:
+        data, _ = decoder.raw_decode(candidate)
+    except json.JSONDecodeError as exc:
+        # Observed in the wild: the model ends with `..."` minus the final brace even with
+        # finish_reason == "stop". Accept exactly that one missing brace; anything else is garbage.
+        try:
+            data, _ = decoder.raw_decode(candidate + "}")
+        except json.JSONDecodeError:
+            raise ModelOutputError(f"invalid JSON from model: {exc}: {text[:200]!r}") from exc
+    if not isinstance(data, dict):
+        raise ModelOutputError(f"model output is not a JSON object: {text[:200]!r}")
+    return data
 
 
 async def complete(model: str, messages: list[Message], **kwargs: Any) -> Any:

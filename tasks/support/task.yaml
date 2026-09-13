@@ -20,4 +20,6 @@ grading_guidance: |
   The reply is judged against the case's `expected` list: the right decision under the policy,
   nothing invented or promised beyond the policy, every question the customer asked answered,
   and the output format respected. Tone matters only when the case says so. A reply that gets
-  the policy decision wrong cannot score above 0.4 regardless of how well it is written.
+  the policy decision wrong cannot score above 0.4 regardless of how well it is written. A
+  reply over the word limit that applies to it cannot score above 0.6: these are customers
+  who asked for a short answer, and the shop's reply template is short by design.

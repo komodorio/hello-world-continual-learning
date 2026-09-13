@@ -2,34 +2,22 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any
-
 from prompt_coach import models
+from prompt_coach.models import ModelOutputError
 from prompt_coach.prompts import load_prompt
 from prompt_coach.types import Case, Graded, Record, Task, Verdict
 
 
-class JudgeOutputError(ValueError):
+class JudgeOutputError(ModelOutputError):
     """The judge did not return the JSON object we asked for."""
 
 
 def parse_verdict(text: str) -> Verdict:
     """Parse the judge's reply strictly; clamp the score to [0, 1]; raise on anything else."""
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = stripped.strip("`")
-        if stripped.startswith("json"):
-            stripped = stripped[4:]
-    start, end = stripped.find("{"), stripped.rfind("}")
-    if start == -1 or end == -1 or end < start:
-        raise JudgeOutputError(f"no JSON object in judge output: {text[:200]!r}")
     try:
-        data: Any = json.loads(stripped[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise JudgeOutputError(f"invalid JSON from judge: {exc}: {text[:200]!r}") from exc
-    if not isinstance(data, dict):
-        raise JudgeOutputError(f"judge output is not an object: {text[:200]!r}")
+        data = models.extract_json_object(text)
+    except ModelOutputError as exc:
+        raise JudgeOutputError(str(exc)) from exc
     score, reason = data.get("score"), data.get("reason")
     if isinstance(score, bool) or not isinstance(score, (int, float)):
         raise JudgeOutputError(f"judge 'score' is not a number: {score!r}")

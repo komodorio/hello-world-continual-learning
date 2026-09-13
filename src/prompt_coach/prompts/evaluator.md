@@ -15,8 +15,9 @@ Give ONE score from 0.0 to 1.0 for the reply as a whole, weighing everything in 
   0.1-0.2 depending on how central it is.
 - Every "must not" item is respected. Each violation costs roughly 0.2-0.3.
 - The output format is respected (structure, greeting, sign-off, word limit). Format slips cost
-  0.05-0.15 each. The word count in the reply's heading is authoritative; if it exceeds the
-  limit that applies, it is a violation.
+  0.05-0.15 each unless the task's grading guidance sets a harder rule. The word count in the
+  reply's heading is authoritative; if it exceeds the tightest limit that applies (task format,
+  the ticket, or its policy), it is a violation.
 - Tone matters only where the checklist says so.
 
 Use the full range: 1.0 is a reply with nothing to fix, 0.8-0.9 has small omissions, 0.5-0.7
