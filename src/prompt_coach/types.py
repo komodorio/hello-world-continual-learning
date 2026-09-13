@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 AgentName = Literal["teacher", "student"]
 
@@ -66,6 +66,7 @@ class Scorecard(BaseModel):
     agent: AgentName
     scores: dict[str, float]
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def mean(self) -> float:
         if not self.scores:

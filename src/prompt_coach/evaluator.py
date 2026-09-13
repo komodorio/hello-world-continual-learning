@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from prompt_coach import models
 from prompt_coach.models import ModelOutputError
 from prompt_coach.prompts import load_prompt
@@ -15,14 +17,17 @@ class JudgeOutputError(ModelOutputError):
 def parse_verdict(text: str) -> Verdict:
     """Parse the judge's reply strictly; clamp the score to [0, 1]; raise on anything else."""
     try:
-        data = models.extract_json_object(text)
+        return verdict_from(models.extract_json_object(text))
     except ModelOutputError as exc:
         raise JudgeOutputError(str(exc)) from exc
+
+
+def verdict_from(data: dict[str, Any]) -> Verdict:
     score, reason = data.get("score"), data.get("reason")
     if isinstance(score, bool) or not isinstance(score, (int, float)):
         raise JudgeOutputError(f"judge 'score' is not a number: {score!r}")
     if not isinstance(reason, str) or not reason.strip():
-        raise JudgeOutputError(f"judge 'reason' is missing: {text[:200]!r}")
+        raise JudgeOutputError(f"judge 'reason' is missing: {data!r}"[:300])
     return Verdict(score=min(1.0, max(0.0, float(score))), reason=reason.strip())
 
 
@@ -40,8 +45,11 @@ async def grade(record: Record, case: Case, *, task: Task, model: str) -> Verdic
     """Grade one reply against its case. The judge never learns which agent wrote it."""
     if record.case_id != case.id:
         raise ValueError(f"record is for case '{record.case_id}', not '{case.id}'")
-    text = await models.complete_text(model, load_prompt("evaluator"), _grade_input(record, case, task), max_tokens=4000)
-    return parse_verdict(text)
+    try:
+        data = await models.complete_json(model, load_prompt("evaluator"), _grade_input(record, case, task), max_tokens=4000)
+    except ModelOutputError as exc:
+        raise JudgeOutputError(str(exc)) from exc
+    return verdict_from(data)
 
 
 _RECOMMEND_SYSTEM = (

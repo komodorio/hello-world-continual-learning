@@ -23,7 +23,7 @@ from prompt_coach.types import (
 )
 
 
-def _now_id() -> str:
+def new_run_id() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
@@ -69,7 +69,7 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
     teacher_prompt = task.initial_prompt
     student_prompt = PromptVersion(version=1, text=teacher_prompt, changelog="initial prompt (same as teacher)")
     run = RunRecord(
-        id=run_id or _now_id(),
+        id=run_id or new_run_id(),
         started_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         task=task.name,
         case_ids=[c.id for c in task.cases],

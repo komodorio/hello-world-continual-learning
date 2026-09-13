@@ -74,3 +74,20 @@ async def complete_text(model: str, system: str, user: str, **kwargs: Any) -> st
     ]
     response = await complete(model, messages, **kwargs)
     return text_of(response)
+
+
+async def complete_json(model: str, system: str, user: str, *, attempts: int = 2, **kwargs: Any) -> dict[str, Any]:
+    """Ask for a JSON object; retry once if the model's JSON is malformed, then raise.
+
+    Models occasionally emit an unterminated or mangled object on the last few characters
+    (observed with finish_reason == "stop"). One retry is cheap; a second failure is reported.
+    """
+    last_error: ModelOutputError | None = None
+    for _ in range(attempts):
+        text = await complete_text(model, system, user, **kwargs)
+        try:
+            return extract_json_object(text)
+        except ModelOutputError as exc:
+            last_error = exc
+    assert last_error is not None
+    raise last_error

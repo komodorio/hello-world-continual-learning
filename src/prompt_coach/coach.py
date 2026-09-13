@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from prompt_coach import models
 from prompt_coach.models import ModelOutputError
 from prompt_coach.prompts import load_prompt
@@ -46,14 +48,17 @@ def _coach_input(
 
 def parse_proposal(text: str, current_version: int) -> PromptVersion:
     try:
-        data = models.extract_json_object(text)
+        return proposal_from(models.extract_json_object(text), current_version)
     except ModelOutputError as exc:
         raise CoachOutputError(str(exc)) from exc
+
+
+def proposal_from(data: dict[str, Any], current_version: int) -> PromptVersion:
     prompt, changelog = data.get("prompt"), data.get("changelog")
     if not isinstance(prompt, str) or not prompt.strip():
-        raise CoachOutputError(f"coach returned no 'prompt': {text[:200]!r}")
+        raise CoachOutputError(f"coach returned no 'prompt': {data!r}"[:300])
     if not isinstance(changelog, str) or not changelog.strip():
-        raise CoachOutputError(f"coach returned no 'changelog': {text[:200]!r}")
+        raise CoachOutputError(f"coach returned no 'changelog': {data!r}"[:300])
     return PromptVersion(version=current_version + 1, text=prompt.strip(), changelog=changelog.strip())
 
 
@@ -73,5 +78,8 @@ async def propose(
     see which changes helped and which hurt.
     """
     user = _coach_input(teacher_prompt, student_prompt, failures, case_inputs, recommendation, history or [])
-    text = await models.complete_text(model, load_prompt("coach"), user, max_tokens=6000)
-    return parse_proposal(text, student_prompt.version)
+    try:
+        data = await models.complete_json(model, load_prompt("coach"), user, max_tokens=6000)
+    except ModelOutputError as exc:
+        raise CoachOutputError(str(exc)) from exc
+    return proposal_from(data, student_prompt.version)

@@ -9,9 +9,10 @@ input: |
 
   Policy snippet:
   Missed or late deliveries. If a tracked parcel is not delivered by the end of the promised
-  delivery day, the customer is entitled to a credit of 10% of the order value, applied to
-  their account within 3 business days after they reply to us with the order number and the
-  words "late delivery". The parcel itself is still delivered or, if lost by the courier,
+  delivery day, the customer is entitled to a credit of 10% of the order value. To open the
+  claim the customer must reply to our message with the order number and the exact words
+  "late delivery"; the customer's first message does not open it. The credit is applied
+  within 3 business days of that reply. The parcel itself is still delivered or, if lost by the courier,
   replaced free of charge after a 5-business-day courier investigation. Support cannot offer
   refunds, free subscription months, or credits above 10% for delivery delays. Do not offer
   escalation to a team lead; only if the customer explicitly asks for a manager, pass the
@@ -21,7 +22,7 @@ expected: |
   Must say:
   - A genuine acknowledgement of the missed delivery and its impact (client tasting, second time).
   - The 10% credit on order #50917 is what we can offer for the delay.
-  - How to claim it: reply with the order number and the words "late delivery"; it is applied within 3 business days.
+  - How to claim it: he must reply to this message with the order number and the exact words "late delivery"; the credit is applied within 3 business days of that reply.
   - What happens to the parcel: still on its way, or replaced free of charge if the courier confirms it lost after a 5-business-day investigation.
   Must not:
   - Promise or imply a full refund or a free subscription month.

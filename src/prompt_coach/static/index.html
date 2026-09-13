@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>prompt-coach</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e6e8ee; --muted:#8b93a7; --teacher:#5cc8a1; --student:#f2b84b; --bad:#ef6b6b; --ok:#5cc8a1; --mid:#f2b84b; --accent:#7aa2f7; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:18px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:18px; }
+  header .models { color:var(--muted); font-size:12px; }
+  header .models b { color:var(--fg); font-weight:500; }
+  main { display:grid; grid-template-columns: 300px 1fr 1fr; gap:14px; padding:14px 20px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; min-width:0; }
+  section h2 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .col { display:flex; flex-direction:column; gap:14px; min-width:0; }
+  label.case { display:flex; gap:8px; align-items:flex-start; padding:6px 0; border-bottom:1px dashed var(--line); cursor:pointer; }
+  label.case:last-of-type { border-bottom:0; }
+  label.case small { color:var(--muted); display:block; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  input[type=number], select, textarea, input[type=text] { background:#0f1218; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
+  input[type=number] { width:70px; }
+  textarea { width:100%; min-height:150px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; resize:vertical; }
+  button { background:var(--accent); color:#0b0e14; border:0; border-radius:6px; padding:7px 12px; font:inherit; font-weight:600; cursor:pointer; }
+  button.secondary { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:default; }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  th, td { padding:5px 8px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:500; font-size:12px; }
+  tfoot td { font-weight:600; border-top:2px solid var(--line); }
+  .t { color:var(--teacher); } .s { color:var(--student); }
+  .good { color:var(--ok); } .mid { color:var(--mid); } .bad { color:var(--bad); }
+  .muted { color:var(--muted); }
+  svg.trend { width:100%; height:110px; display:block; margin-top:10px; }
+  .versions { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .versions button { padding:4px 9px; font-size:12px; }
+  .versions button.active { outline:2px solid var(--accent); }
+  pre { margin:0; white-space:pre-wrap; word-break:break-word; font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; background:#0f1218; border:1px solid var(--line); border-radius:6px; padding:10px; max-height:380px; overflow:auto; }
+  pre .add { color:var(--ok); } pre .del { color:var(--bad); text-decoration:line-through; opacity:.8; }
+  .changelog { font-size:12px; color:var(--muted); margin:6px 0 8px; }
+  #log { max-height:300px; overflow:auto; font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #log div { border-bottom:1px dashed var(--line); padding:3px 0; }
+  #log .ts { color:var(--muted); margin-right:8px; }
+  .status { font-size:12px; color:var(--muted); }
+  .status.live { color:var(--ok); }
+  .verdict { margin-top:10px; }
+  .score { font-size:22px; font-weight:700; }
+  ul.runs { list-style:none; margin:0; padding:0; font-size:12px; }
+  ul.runs li { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed var(--line); }
+  ul.runs button { padding:2px 8px; font-size:11px; }
+  @media (max-width:1100px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>prompt-coach</h1>
+  <div class="models" id="models">loading…</div>
+  <div class="status" id="status">idle</div>
+</header>
+<main>
+  <div class="col">
+    <section>
+      <h2>Cases</h2>
+      <div id="cases"></div>
+      <div class="row">
+        <label>rounds <input type="number" id="rounds" min="1" max="10" value="5"></label>
+        <label>gap <input type="number" id="gap" min="0" max="1" step="0.05" value="0.1"></label>
+      </div>
+      <div class="row">
+        <button id="start">Start run</button>
+        <span class="muted" id="startNote"></span>
+      </div>
+    </section>
+    <section>
+      <h2>Saved runs</h2>
+      <ul class="runs" id="runs"></ul>
+    </section>
+    <section>
+      <h2>Test one case</h2>
+      <div class="row">
+        <select id="testCase"></select>
+        <select id="testAgent"><option value="student">student</option><option value="teacher">teacher</option></select>
+      </div>
+      <div class="row"><textarea id="testPrompt" placeholder="prompt (empty = task prompt v1)"></textarea></div>
+      <div class="row">
+        <button id="testRun">Run &amp; grade</button>
+        <button class="secondary" id="useLatest">Use latest prompt</button>
+      </div>
+      <div id="testOut"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section>
+      <h2>Scores <span class="muted" id="runTitle"></span></h2>
+      <div id="grid" class="muted">No run yet. Pick cases and start one, or open a saved run.</div>
+      <svg class="trend" id="trend" viewBox="0 0 400 110" preserveAspectRatio="none"></svg>
+    </section>
+    <section>
+      <h2>Live log</h2>
+      <div id="log"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section>
+      <h2>Student prompt versions</h2>
+      <div class="versions" id="versions"></div>
+      <div class="changelog" id="changelog"></div>
+      <pre id="promptView">–</pre>
+      <div class="row">
+        <label><input type="checkbox" id="showDiff" checked> show diff against previous version</label>
+      </div>
+    </section>
+    <section>
+      <h2>Evaluator's recommendation</h2>
+      <pre id="recommendation">–</pre>
+    </section>
+  </div>
+</main>
+
+<script>
+// ---------- state ----------
+// `run` mirrors the server's RunRecord: {id, case_ids, rounds:[RoundResult], stop_reason, ...}.
+// Live events update it; saved runs replace it. Everything renders from this one object.
+let meta = null;              // GET /cases
+let run = null;               // current run (live or loaded)
+let pending = {};             // round -> graded[] for the round in progress
+let selectedVersion = null;
+let es = null;
+
+const $ = (id) => document.getElementById(id);
+const cls = (x) => x >= 0.8 ? 'good' : x >= 0.6 ? 'mid' : 'bad';
+const f2 = (x) => x.toFixed(2);
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// ---------- boot ----------
+async function boot() {
+  meta = await (await fetch('/cases')).json();
+  $('models').innerHTML = `teacher <b class="t">${esc(meta.models.teacher)}</b> · student <b class="s">${esc(meta.models.student)}</b> · evaluator/coach <b>${esc(meta.models.evaluator)}</b>`;
+  $('rounds').value = meta.loop.max_rounds;
+  $('gap').value = meta.loop.gap;
+  $('cases').innerHTML = meta.cases.map(c => `
+    <label class="case"><input type="checkbox" value="${esc(c.id)}" checked>
+      <span><b>${esc(c.id)}</b><small>${esc(c.input.split('\n').slice(1, 3).join(' ').slice(0, 110))}…</small></span></label>`).join('');
+  $('testCase').innerHTML = meta.cases.map(c => `<option>${esc(c.id)}</option>`).join('');
+  await loadRuns();
+  connect();   // attach to any run already in progress (or replay its buffered events)
+}
+
+async function loadRuns() {
+  const runs = await (await fetch('/runs')).json();
+  $('runs').innerHTML = runs.length ? runs.map(r => `
+    <li><span>${esc(r.id)} <span class="muted">· ${r.rounds} rounds · ${r.student_means.map(f2).join(' → ')}</span></span>
+        <button class="secondary" data-id="${esc(r.id)}">open</button></li>`).join('') : '<li class="muted">none yet</li>';
+  $('runs').querySelectorAll('button').forEach(b => b.onclick = () => openRun(b.dataset.id));
+}
+
+async function openRun(id) {
+  const res = await fetch(`/runs/${encodeURIComponent(id)}`);
+  if (!res.ok) { logLine(`could not load run ${id}`); return; }
+  run = await res.json(); pending = {}; selectedVersion = null;
+  setStatus(`replaying ${id}`, false);
+  logLine(`opened saved run ${id} · ${run.stop_reason || 'in progress'}`);
+  renderAll();
+}
+
+// ---------- start / events ----------
+$('start').onclick = async () => {
+  const cases = [...$('cases').querySelectorAll('input:checked')].map(i => i.value);
+  if (!cases.length) { $('startNote').textContent = 'pick at least one case'; return; }
+  $('start').disabled = true; $('startNote').textContent = '';
+  const res = await fetch('/start', { method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ cases, rounds: +$('rounds').value, gap: +$('gap').value }) });
+  if (!res.ok) { $('startNote').textContent = (await res.json()).detail; $('start').disabled = false; return; }
+  run = null; pending = {}; selectedVersion = null; $('log').innerHTML = ''; renderAll();
+  connect();
+};
+
+function connect() {
+  if (es) es.close();
+  es = new EventSource('/events');
+  const on = (type) => es.addEventListener(type, (e) => handle(type, JSON.parse(e.data)));
+  ['run_started', 'round_started', 'graded', 'round_finished', 'prompt_proposed', 'run_finished', 'error', 'log'].forEach(on);
+  es.addEventListener('end', () => { es.close(); es = null; $('start').disabled = false; if (run && !run.stop_reason) setStatus('stopped', false); });
+  es.onerror = () => { setStatus('disconnected', false); };
+}
+
+function handle(type, ev) {
+  switch (type) {
+    case 'run_started':
+      run = ev.run; pending = {}; selectedVersion = null;
+      setStatus(`running ${run.id}`, true); $('start').disabled = true;
+      logLine(`run ${run.id} started · cases ${run.case_ids.join(', ')} · gap ${run.gap} · max ${run.max_rounds} rounds`);
+      break;
+    case 'round_started':
+      pending[ev.round] = [];
+      logLine(`round ${ev.round} · student prompt v${ev.prompt.version} · running ${run.case_ids.length}×2 agents…`);
+      break;
+    case 'graded':
+      (pending[ev.round] ||= []).push(ev.graded);
+      logLine(`<span class="${ev.graded.record.agent === 'teacher' ? 't' : 's'}">${ev.graded.record.agent}</span> ${ev.graded.record.case_id} → <b class="${cls(ev.graded.verdict.score)}">${f2(ev.graded.verdict.score)}</b> <span class="muted">${esc(ev.graded.verdict.reason.slice(0, 140))}…</span>`);
+      break;
+    case 'round_finished':
+      run.rounds = run.rounds.filter(r => r.round !== ev.result.round).concat([ev.result]);
+      delete pending[ev.round];
+      logLine(`round ${ev.round} done · teacher <b class="t">${f2(ev.result.teacher.mean)}</b> · student <b class="s">${f2(ev.result.student.mean)}</b>`);
+      break;
+    case 'prompt_proposed':
+      logLine(`coach → student prompt v${ev.prompt.version}: ${esc(ev.prompt.changelog)}`);
+      selectedVersion = ev.prompt.version;
+      break;
+    case 'run_finished':
+      run = ev.run; setStatus(`finished · ${run.stop_reason}`, false); $('start').disabled = false;
+      logLine(`<b>finished</b> · ${esc(run.stop_reason)}`); loadRuns();
+      break;
+    case 'error':
+      logLine(`<b class="bad">error</b> ${esc(ev.message)}`); setStatus('error', false); $('start').disabled = false;
+      break;
+    case 'log':
+      logLine(esc(ev.message));
+  }
+  renderAll();
+}
+
+// ---------- rendering ----------
+function setStatus(text, live) { const s = $('status'); s.textContent = text; s.className = 'status' + (live ? ' live' : ''); }
+
+function logLine(html) {
+  const d = document.createElement('div');
+  d.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span>${html}`;
+  $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight;
+}
+
+function versions() {
+  if (!run) return [];
+  const list = [];
+  for (const r of [...run.rounds].sort((a, b) => a.round - b.round)) {
+    if (!list.some(v => v.version === r.student_prompt.version)) list.push(r.student_prompt);
+    if (r.next_prompt && !list.some(v => v.version === r.next_prompt.version)) list.push(r.next_prompt);
+  }
+  return list;
+}
+
+function renderAll() { renderGrid(); renderTrend(); renderVersions(); renderRecommendation(); }
+
+function renderGrid() {
+  if (!run) { $('grid').className = 'muted'; $('grid').textContent = 'No run yet. Pick cases and start one, or open a saved run.'; $('runTitle').textContent = ''; return; }
+  $('runTitle').textContent = `· ${run.id}`;
+  const rounds = [...run.rounds].sort((a, b) => a.round - b.round);
+  const live = Object.keys(pending).map(Number).filter(n => !rounds.some(r => r.round === n));
+  const cols = [...rounds.map(r => ({ n: r.round, t: r.teacher.scores, s: r.student.scores, v: r.student_prompt.version, done: true })),
+                ...live.map(n => { const t = {}, s = {}; for (const g of pending[n]) (g.record.agent === 'teacher' ? t : s)[g.record.case_id] = g.verdict.score; return { n, t, s, done: false }; })];
+  if (!cols.length) { $('grid').className = 'muted'; $('grid').textContent = 'round 1 running…'; return; }
+  const cell = (x) => x === undefined ? '<td class="muted">…</td>' : `<td class="${cls(x)}">${f2(x)}</td>`;
+  const mean = (o) => { const v = Object.values(o); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined; };
+  let html = '<table><thead><tr><th>case</th>' + cols.map(c => `<th colspan="2">round ${c.n}${c.v ? ` · v${c.v}` : ''}${c.done ? '' : ' <span class="muted">(live)</span>'}</th>`).join('') + '</tr>';
+  html += '<tr><th></th>' + cols.map(() => '<th class="t">teacher</th><th class="s">student</th>').join('') + '</tr></thead><tbody>';
+  for (const id of run.case_ids) html += `<tr><td>${esc(id)}</td>` + cols.map(c => cell(c.t[id]) + cell(c.s[id])).join('') + '</tr>';
+  html += '</tbody><tfoot><tr><td>mean</td>' + cols.map(c => { const mt = mean(c.t), ms = mean(c.s); return cell(mt) + cell(ms); }).join('') + '</tr></tfoot></table>';
+  $('grid').className = ''; $('grid').innerHTML = html;
+}
+
+function renderTrend() {
+  const svg = $('trend'); svg.innerHTML = '';
+  if (!run || !run.rounds.length) return;
+  const rounds = [...run.rounds].sort((a, b) => a.round - b.round);
+  const W = 400, H = 110, px = 28, py = 12;
+  const x = (i) => rounds.length === 1 ? W / 2 : px + i * (W - 2 * px) / (rounds.length - 1);
+  const y = (v) => H - py - v * (H - 2 * py);
+  const line = (key, color) => {
+    const pts = rounds.map((r, i) => `${x(i)},${y(r[key].mean)}`).join(' ');
+    return `<polyline fill="none" stroke="${color}" stroke-width="2" points="${pts}"/>` +
+      rounds.map((r, i) => `<circle cx="${x(i)}" cy="${y(r[key].mean)}" r="3" fill="${color}"/><text x="${x(i)}" y="${y(r[key].mean) - 7}" fill="${color}" font-size="10" text-anchor="middle">${f2(r[key].mean)}</text>`).join('');
+  };
+  const gapBand = rounds.map((r, i) => `${x(i)},${y(Math.max(0, r.teacher.mean - run.gap))}`).join(' ');
+  svg.innerHTML =
+    `<line x1="${px}" y1="${y(0)}" x2="${W - px}" y2="${y(0)}" stroke="#2a2f3a"/><line x1="${px}" y1="${y(1)}" x2="${W - px}" y2="${y(1)}" stroke="#2a2f3a" stroke-dasharray="3 3"/>` +
+    `<polyline fill="none" stroke="#5cc8a1" stroke-opacity=".35" stroke-dasharray="4 3" stroke-width="1" points="${gapBand}"/>` +
+    line('teacher', '#5cc8a1') + line('student', '#f2b84b') +
+    rounds.map((r, i) => `<text x="${x(i)}" y="${H - 1}" fill="#8b93a7" font-size="10" text-anchor="middle">r${r.round}</text>`).join('');
+}
+
+function renderVersions() {
+  const vs = versions();
+  if (!vs.length) { $('versions').innerHTML = ''; $('promptView').textContent = meta ? meta.prompt : '–'; $('changelog').textContent = meta ? 'task prompt v1 (no run yet)' : ''; return; }
+  if (selectedVersion === null || !vs.some(v => v.version === selectedVersion)) selectedVersion = vs[vs.length - 1].version;
+  $('versions').innerHTML = vs.map(v => `<button class="secondary${v.version === selectedVersion ? ' active' : ''}" data-v="${v.version}">v${v.version}</button>`).join('');
+  $('versions').querySelectorAll('button').forEach(b => b.onclick = () => { selectedVersion = +b.dataset.v; renderVersions(); });
+  const cur = vs.find(v => v.version === selectedVersion);
+  const prev = vs.find(v => v.version === selectedVersion - 1);
+  $('changelog').textContent = `v${cur.version} · ${cur.changelog}`;
+  $('promptView').innerHTML = (prev && $('showDiff').checked) ? diffHtml(prev.text, cur.text) : esc(cur.text);
+}
+$('showDiff').onchange = renderVersions;
+
+function renderRecommendation() {
+  const rounds = run ? [...run.rounds].sort((a, b) => a.round - b.round) : [];
+  const last = rounds[rounds.length - 1];
+  $('recommendation').textContent = last ? `round ${last.round}\n\n${last.recommendation}` : '–';
+}
+
+// Line-based LCS diff; small inputs, so O(n·m) is fine.
+function diffHtml(a, b) {
+  const A = a.split('\n'), B = b.split('\n');
+  const n = A.length, m = B.length, L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { out.push(`  ${esc(A[i])}`); i++; j++; }
+    else if (L[i + 1][j] >= L[i][j + 1]) { out.push(`<span class="del">- ${esc(A[i])}</span>`); i++; }
+    else { out.push(`<span class="add">+ ${esc(B[j])}</span>`); j++; }
+  }
+  while (i < n) out.push(`<span class="del">- ${esc(A[i++])}</span>`);
+  while (j < m) out.push(`<span class="add">+ ${esc(B[j++])}</span>`);
+  return out.join('\n');
+}
+
+// ---------- single-case test ----------
+$('useLatest').onclick = () => { const vs = versions(); $('testPrompt').value = vs.length ? vs[vs.length - 1].text : meta.prompt; };
+$('testRun').onclick = async () => {
+  $('testRun').disabled = true; $('testOut').innerHTML = '<div class="muted">running…</div>';
+  const body = { case: $('testCase').value, agent: $('testAgent').value, prompt: $('testPrompt').value || null };
+  const res = await fetch('/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  $('testRun').disabled = false;
+  if (!res.ok) { $('testOut').innerHTML = `<div class="bad">${esc((await res.json()).detail || res.statusText)}</div>`; return; }
+  const { record, verdict } = await res.json();
+  $('testOut').innerHTML = `<div class="verdict"><span class="score ${cls(verdict.score)}">${f2(verdict.score)}</span>
+     <span class="muted">· ${esc(record.agent)} · ${esc(record.model)} · ${record.reply.split(/\s+/).length} words · ${record.latency_s}s</span></div>
+     <pre style="margin-top:8px">${esc(record.reply)}</pre>
+     <div class="changelog" style="margin-top:8px">${esc(verdict.reason)}</div>`;
+};
+
+boot();
+</script>
+</body>
+</html>
