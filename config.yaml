@@ -16,5 +16,6 @@ runs_dir: runs             # every run is appended to <runs_dir>/<timestamp>.jso
 
 loop:
   max_rounds: 5            # stop after this many rounds
-  gap: 0.1                 # stop when student_mean >= teacher_mean - gap
+  min_rounds: 2            # the gap cannot close before the teacher average has this many rounds
+  gap: 0.1                 # stop when student_mean >= teacher average over rounds - gap
   coach_threshold: 0.7     # student runs scored below this are shown to the coach

@@ -85,6 +85,17 @@ async def test_stop_rule_uses_teacher_average_not_a_single_lucky_round(fake: Fak
     assert len(run.rounds) == 3 and run.stop_reason.startswith("round budget")
 
 
+async def test_gap_cannot_close_before_min_rounds(fake: FakeModel, config: Config, support_task: Task) -> None:
+    """Student already within the gap in round 1: with min_rounds=2 the loop still coaches once."""
+    ids = [c.id for c in support_task.cases]
+    config.loop.min_rounds = 2
+    fake.teacher_scores = {i: 0.7 for i in ids}
+    fake.student_scores = [{i: 0.65 for i in ids}, {i: 0.65 for i in ids}]
+    run = (await collect(config, support_task))[-1].run
+    assert run is not None and len(run.rounds) == 2 and run.stop_reason.startswith("gap closed")
+    assert run.rounds[0].next_prompt is not None
+
+
 def test_run_ids_are_unique_within_a_second() -> None:
     ids = {loop.new_run_id() for _ in range(50)}
     assert len(ids) == 50

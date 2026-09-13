@@ -5,7 +5,7 @@ tiny support agent on the same four customer tickets. An evaluator grades every 
 A coach reads the weak model's failures and rewrites only its prompt, and the loop repeats until the
 weak model is within a hair of the strong one.
 
-![prompt-coach UI after a three-round run](docs/ui.png)
+![prompt-coach UI: a five-round run in which the student went 0.69 → 0.84](docs/ui.png)
 
 ## The story
 
@@ -119,14 +119,21 @@ the stop rule. After every round it prints the score table, a bar chart of the s
 round next to the teacher's, the evaluator's brief, and the diff of the new prompt; at the end, the
 best-scoring prompt.
 
-`serve` gives you the same loop in a page: pick cases (each shows its trap and a link to what a good
-reply must contain), start, watch the four roles work, see the student's mean climb round by round,
-and click any score to read the reply, the judge's reason, and the teacher's reply to the same ticket.
+`serve` gives you the same loop in a page, in light or dark. Pick cases (the `?` on each shows its
+trap and what a good reply must contain), start, watch the four roles work, see the student's mean
+climb round by round, and click any score to read the checklist, the judge's reason, the student's
+reply and the teacher's reply to the same ticket, with arrow keys to step through rounds. Every saved
+run shows up as a card with its final student score, the change since v1, the teacher's average and
+whether it caught up.
 It binds to 127.0.0.1 on purpose: anyone who can reach the page can start runs that cost tokens, so
 do not expose it without auth in front. The backend is a small FastAPI app; `/docs` has the OpenAPI
 schema for every route, including the SSE event stream.
 
-![Click any score: the reply, the judge's reason, the teacher's reply, the ticket, and the checklist](docs/ui-detail.png)
+![Click any score: the trap, the checklist a good reply must satisfy, the judge's reason, the reply, and the teacher's reply to the same ticket](docs/ui-detail.png)
+
+The page has a light theme too (the toggle in the header; it follows your system setting by default):
+
+![The same page in light mode, comparing two runs](docs/ui-light.png)
 
 ## What you'll see
 
@@ -274,9 +281,10 @@ cents. `runs/` keeps everything, and `replay` is free.
 ## Known limits
 
 **Four cases.** With four scores, one judge wobble of 0.1 on one case moves the mean by 0.025, and
-one real slip by the *teacher* moves the target the student is chasing. Two guards: the stop rule
+one real slip by the *teacher* moves the target the student is chasing. Three guards: the stop rule
 compares the student to the teacher's mean *averaged over all rounds so far*, not to one lucky
-round, and `gap = 0.1` is deliberately wider than the noise. You will still see the gap close in
+round; the gap cannot close before round `min_rounds = 2`, so a weak teacher round 1 never ends
+the loop before any coaching happened; and `gap = 0.1` is deliberately wider than the noise. You will still see the gap close in
 two rounds some of the time and in four others. More cases smooth this; we kept four so a round stays
 cheap and the whole run fits on one screen. The mean can also hide a bad case: a student at 0.79
 overall may still be at 0.50 on one ticket, which is why the per-case grid, not the mean, is the

@@ -18,6 +18,9 @@ class Models(BaseModel):
 
 class LoopSettings(BaseModel):
     max_rounds: int = Field(default=5, ge=1)
+    # The gap can only close once the teacher baseline is an average of at least this many rounds;
+    # a single weak teacher round would otherwise end the loop before any coaching happened.
+    min_rounds: int = Field(default=2, ge=1)
     gap: float = Field(default=0.1, ge=0.0, le=1.0)
     coach_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
 
