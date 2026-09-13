@@ -2,8 +2,8 @@
 
 This is a small, runnable example of continual learning for an LLM agent. A cheap model learns to do
 a support job as well as an expensive one, and the only thing that changes between rounds is the
-cheap model's prompt. You can read the whole thing in an afternoon and run it for the price of a
-coffee.
+cheap model's prompt. The code fits in an afternoon of reading and a run costs a few dollars in
+model calls.
 
 ## What this is
 
@@ -20,17 +20,13 @@ without paying for a single model call.
 
 When people say an agent "learns in production", they usually do not mean fine-tuning. They mean a
 loop: the agent does its job, something grades the result, something changes the agent's
-instructions, and the agent runs again. That loop is described in every talk about AI agents, but
-it is hard to watch one end to end, because in a real system it is spread across thousands of runs
-and several teams.
+instructions, and the agent runs again. In a real system that loop is spread across thousands of
+runs and several teams, so nobody gets to watch one prompt change from beginning to end.
 
-This repo is that loop at the smallest size where the effect is still visible. Four tickets, two
-models, one prompt that changes. You see the prompt go from v1 to v2 to v3, and for every score you
-can read the reply and the reason it got that score, so when the student improves you know why, and
-when it gets worse you know why too.
-
-The hard parts are in here as well. The coach can make the student worse, the evaluator is noisy,
-and the teacher has bad rounds of its own. The run further down shows all three.
+Here the loop is small enough to watch. For every score you can read the reply and the reason it
+got that score, so when the student improves you know which edit did it, and when it gets worse you
+know that too. The hard parts are kept in: the coach can make the student worse, the evaluator is
+noisy, and the teacher has weak rounds of its own.
 
 ## How it works
 
@@ -41,21 +37,20 @@ flowchart LR
     P --> S[student<br/>cheap model]
     T[teacher<br/>expensive model · prompt v1, fixed] --> J
     S --> J[evaluator<br/>has the checklist · one score 0–1 + reason<br/>does not know who wrote the reply]
-    J --> D{student average ≥<br/>teacher average − gap?}
+    J --> D{at least 2 rounds done, and<br/>student average ≥ teacher average − gap?}
     D -- yes --> X([stop: caught up])
     D -- no, rounds left --> C[coach<br/>reads low scores + reasons<br/>never sees the checklist]
     D -- no, budget spent --> Y([stop: budget spent])
     C -- "prompt vN+1 + changelog" --> P
-    linkStyle 6 stroke:#f5a524,stroke-width:2px
+    linkStyle 7 stroke:#f5a524,stroke-width:2px
 ```
 
 The teacher is the expensive model running the task's original prompt. Its prompt never changes,
-because it is the reference; the bar the student has to reach is the teacher's average score over
-all rounds so far, so one unusually good or bad teacher round does not move the target.
+because it is the reference. The bar the student has to reach is the teacher's average over all
+rounds so far, so one unusually good or bad teacher round moves the target only a little.
 
-The student is the cheap model running the same agent on the same tickets. Between rounds the only
-thing that changes is its prompt, which means that when its score moves you can attribute the move
-to one specific edit.
+The student is the cheap model running the same agent on the same tickets. Between rounds only its
+prompt changes, so when its score moves there is one edit to look at.
 
 The evaluator is a model that has the answer key. Every ticket ships with a checklist of what a good
 reply must say, what it must not do, and which questions it has to answer. The evaluator reads a
@@ -117,45 +112,47 @@ at `/docs` while `serve` is running.
 ## One real run, explained
 
 This run used Claude Sonnet as the teacher and Claude Haiku as the student, on all four tickets,
-with a gap of 0.1 and a budget of five rounds.
+with a gap of 0.1 and a budget of five rounds. The prompt versions and their word counts come from
+the saved run file.
 
-| round | student prompt | teacher | student | what happened |
+| round | student prompt | teacher | student | what the coach had changed, and what happened |
 |---|---|---|---|---|
-| 1 | v1 (same as teacher) | 0.93 | 0.69 | The student got the policy decisions right but dropped required details and ran over the word limits. |
-| 2 | v2 | 0.93 | 0.66 | The coach added rules about checking eligibility dates. The student over-applied them. |
-| 3 | v3 | 0.95 | 0.59 | The refund ticket fell to 0.10: the student refused a refund the policy clearly allows. |
-| 4 | v4 | 0.95 | 0.77 | The coach saw two regressions in its history and replaced the date rule with "quote the policy's timing verbatim". |
-| 5 | v5 | 0.77 | 0.84 | The student caught up. The teacher had a weak round; the stop rule uses its 0.90 average. |
+| 1 | v1, 74 words, same as the teacher's | 0.93 | 0.69 | The student got the policy decisions right but dropped required details and ran over word limits. |
+| 2 | v2, 162 words | 0.93 | 0.66 | Rules for covering every request, giving exact figures, and refusing explicitly. The refund ticket fell to 0.35: the student misread the 7-day condition. |
+| 3 | v3, 218 words | 0.95 | 0.59 | "State the eligibility decision first and definitively." The student did, and refused a refund the policy allows. Refund at 0.10. |
+| 4 | v4, 220 words | 0.95 | 0.77 | An explicit check of which date each policy window counts from. Refund back to 1.00. |
+| 5 | v5, 245 words | 0.77 | 0.84 | The date check was replaced by "quote the policy's timing verbatim, do not derive new dates", because it still produced invented dates on other tickets. The student caught up. |
 
-In round one both models had the same prompt, so the difference between 0.93 and 0.69 is the
-difference between the models. The evaluator's recommendation to the coach after that round said the
-student "consistently identifies the right policy and mechanics but loses points through incomplete
-execution", which is a fair summary of what a cheap model does with a thin prompt.
+In round one both models had the same prompt and the same tickets, so most of the difference between
+0.93 and 0.69 is the difference between the models, with some noise on top. The evaluator's
+recommendation to the coach after that round said the student "consistently identifies the right
+policy and mechanics but loses points through incomplete execution", which is a fair description of
+what a cheap model does with a thin prompt.
 
-Rounds two and three are the reason this repo exists. The coach's new prompt looked sensible: it told
-the student to check eligibility dates before answering. Haiku followed that instruction too hard,
-told the customer she was "beyond the 7-day window" when she was not, and refused a refund the policy
-allows. The score for that ticket went from 0.85 to 0.35 to 0.10. If you had shipped v2 because it
-read better than v1, you would have made the agent worse and not known it, because nothing in the
-prompt text tells you that. The score does.
+Rounds two and three are the reason this repo exists. Each new prompt read like an improvement. v2
+asked for exact figures and explicit refusals; v3 asked the student to state the eligibility decision
+first and definitively. Haiku did exactly that, told the customer she was "beyond the 7-day window"
+when she was not, and refused a refund the policy allows. The refund ticket went from 0.85 to 0.35
+to 0.10 while the prompt text itself gave no hint that anything was wrong. The score did.
 
-Round four is where the coach earned its place. It could see that v2 and v3 both scored below v1,
-so instead of adding another rule it deleted the one that caused the damage and replaced it with an
-instruction to quote the policy's timing in the policy's own words rather than deriving new dates.
-The student recovered to 0.77, then 0.84. The prompt that finally worked is shorter than the two
-that failed.
+In round four the coach had two regressions in front of it, because it is shown how every earlier
+version scored. It added a check of which date each policy window is counted from, and the refund
+ticket went back to 1.00. In round five it replaced that check with a plainer rule, quoting the
+policy's timing in the policy's own words rather than working out new dates, because the check had
+started producing invented dates on other tickets. The student finished at 0.84.
 
-Round five also shows why the stop rule compares against the teacher's average and not against the
-current round. The teacher itself dropped to 0.77 that round, on two tickets it normally gets right.
-Measured against that one round the student would have "won" by luck; measured against the 0.90
-average it caught up on merit, and that is what the loop reports.
+Round five also shows why the stop rule compares with the teacher's average and not with the current
+round. The teacher itself dropped to 0.77 that round, on two tickets it normally gets right. Against
+that one round the student would have looked ahead by 0.07; against the 0.90 average the target was
+0.80, the student was at 0.84, and that is what the loop reports.
 
-Two details about the coach matter here. The first version of it could not see how earlier prompts
-had scored, and it behaved the way you would expect: it added rules every round, the prompt grew from
-352 to 486 to 553 words, and the student got worse every round. Giving the coach the score history
-of its own versions, plus a hard cap of 300 words on the prompt, is what made it converge. Not every
-run does converge. Another run with the same settings went 0.72, 0.68, 0.68, 0.49 and spent its
-budget without catching up, and the run cards in the web page show that as plainly as this one.
+One detail about the coach matters here. During development, the first version of it could not see
+how earlier prompts had scored, and it behaved the way you would expect: it added rules every round,
+the prompt grew from 352 to 486 to 553 words, and the student got worse every round. Showing the
+coach the score history of its own versions, and capping the prompt at 300 words, is what made it
+converge. It does not always converge. Another run with the same settings went 0.72, 0.68, 0.68,
+0.49 and spent its budget without catching up, and the run cards in the web page show that as
+plainly as this one.
 
 ## The four tickets
 
@@ -218,8 +215,8 @@ The coach optimises against these four tickets and nothing else, so a prompt tha
 may be fitting these tickets. The prompts it writes are general, with no customer names, dates or
 figures in them, but this repo cannot prove they generalise. Adding cases is the fix.
 
-Only the student's prompt changes. There are no tools, no retrieval and no fine-tuning, because the
-point is to see one lever move.
+Only the student's prompt changes. There are no tools, no retrieval and no fine-tuning, so that one
+change at a time is the only thing you are looking at.
 
 ## Under the hood
 
@@ -227,7 +224,7 @@ point is to see one lever move.
 tasks/support/     task.yaml and cases/*.yaml, the example task
 src/prompt_coach/
   roles/           agent.py, evaluator.py, coach.py
-  loop.py          one round: run both models, grade every reply, stop or call the coach
+  loop.py          runs rounds until the stop rule fires: both models answer, every reply is graded, then stop or call the coach
   runs.py          runs/<id>.json and replay
   cli.py           cases, run, test, replay, serve
   web/             a FastAPI backend and one static page; live updates over SSE; OpenAPI at /docs
@@ -235,13 +232,13 @@ src/prompt_coach/
 tests/             48 offline tests with a fake model, and one live test you opt into
 ```
 
-The agents run on Google ADK over LiteLLM. The evaluator and the coach are single model calls whose
-prompts live in `src/prompt_coach/prompts/`. The loop produces a stream of events, and the terminal
+The agents run on Google ADK over LiteLLM. The evaluator and the coach call LiteLLM directly, with
+the prompts in `src/prompt_coach/prompts/`. The loop produces a stream of events, and the terminal
 and the web page are two renderers of that same stream.
 
 ```bash
 uv run pytest                 # offline, about one second
-uv run pytest -m live         # one real call per role; needs ANTHROPIC_API_KEY
+uv run pytest -m live         # one student reply and one evaluator grade, for real; needs ANTHROPIC_API_KEY
 ```
 
 MIT licensed.

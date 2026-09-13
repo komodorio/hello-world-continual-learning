@@ -260,7 +260,7 @@
       <div class="pb"><div class="runsrow" id="runsRow"></div></div>
     </section>
     <section class="panel">
-      <div class="ph"><h2>The loop</h2><span class="sub" id="loopSub">four roles, one lever: the student's prompt. Evaluator and coach share the teacher's model.</span></div>
+      <div class="ph"><h2>The loop</h2><span class="sub" id="loopSub">only the student's prompt changes between rounds. The evaluator and the coach run on the teacher's model.</span></div>
       <div class="pb">
         <div class="loop" id="loop"></div>
         <div class="storyline" id="story"></div>
@@ -584,7 +584,7 @@ function renderLoop(run) {
       <div class="model mono">${esc(m.coach || '')}</div>
       <div class="big">${Math.max(0, vs.length - 1)}<small>prompt rewrite${vs.length === 2 ? '' : 's'}</small></div>
       <div class="what">Reads the student's low scores and the reasons. Never sees the answer key. Writes the next prompt.</div></div>
-    <div class="loopback" style="grid-column:1/-1"><span class="line"></span><span>coach hands <b class="s">prompt v${vs.length ? vs[vs.length - 1].version : 2}</b> back to the student; the teacher never changes</span></div>`;
+    <div class="loopback" style="grid-column:1/-1"><span class="line"></span><span>the coach hands <b class="s">prompt v${vs.length ? vs[vs.length - 1].version : 2}</b> back to the student, and the teacher's prompt never changes</span></div>`;
   $('story').innerHTML = storyline(run, rounds, cur);
 }
 function storyline(run, rounds, cur) {
