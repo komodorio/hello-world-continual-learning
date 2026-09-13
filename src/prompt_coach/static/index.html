@@ -28,7 +28,7 @@
   .app { display:grid; grid-template-columns:272px 1fr; grid-template-rows:52px 1fr; height:100vh; }
   header { grid-column:1/-1; display:flex; align-items:center; gap:14px; padding:0 18px; border-bottom:1px solid var(--line); background:var(--canvas); }
   header .brand { font-weight:500; font-size:15px; display:flex; align-items:center; gap:9px; }
-  header .brand i { width:10px; height:10px; border-radius:50%; background:var(--student); box-shadow:0 0 0 3px var(--student-dim); display:inline-block; }
+  header .brand i { width:10px; height:10px; border-radius:50%; background:var(--fog); display:inline-block; }
   header .tagline { color:var(--muted); font-size:13px; }
   header .spacer { flex:1; }
   .pill { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 11px; border-radius:9999px; border:1px solid var(--line2); background:transparent; color:var(--text2); font-size:12.5px; white-space:nowrap; }
@@ -59,7 +59,7 @@
   .controls label { font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
   input[type=number], select, textarea, input[type=text] { background:var(--canvas); color:var(--text); border:1px solid var(--line2); border-radius:6px; padding:5px 8px; font:inherit; letter-spacing:inherit; }
   input[type=number] { width:64px; }
-  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline:none; box-shadow:0 0 0 1px #3e3e44, 0 0 0 3px rgba(228,229,233,.12); }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline:2px solid var(--fog); outline-offset:2px; }
   .btn { height:30px; padding:0 14px; border-radius:9999px; border:1px solid var(--line2); background:transparent; color:var(--text); }
   .btn:hover { background:var(--surface); }
   .btn.primary { background:var(--fog); color:#0b0e14; border-color:var(--fog); font-weight:500; }
@@ -92,25 +92,32 @@
 
   /* progress */
   .two { display:grid; grid-template-columns:1.35fr 1fr; gap:22px; }
+  .two > * { min-width:0; }
+  main > * { min-width:0; }
   .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
   .kpi { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
   .kpi .l { font-size:12px; color:var(--muted); }
   .kpi .v { font-size:20px; font-weight:500; margin-top:2px; }
   .kpi .v small { font-size:12px; color:var(--muted); font-weight:400; }
   svg.chart { width:100%; height:190px; display:block; }
+  .live-tag { font-size:11px; color:var(--good); }
   .legend { display:flex; gap:16px; font-size:12px; color:var(--muted); margin-top:6px; }
   .legend i { display:inline-block; width:14px; height:2px; vertical-align:middle; margin-right:6px; }
 
   /* grid */
+  .gridwrap { overflow-x:auto; }
   table { border-collapse:collapse; width:100%; }
+  th:first-child, td:first-child { position:sticky; left:0; background:var(--canvas); z-index:1; }
   th, td { padding:7px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
   th:first-child, td:first-child { text-align:left; }
   th { color:var(--muted); font-weight:400; font-size:12px; }
   thead tr:first-child th { border-bottom:0; padding-bottom:2px; }
   tfoot td { font-weight:500; border-top:1px solid var(--line2); border-bottom:0; }
-  td.score { cursor:pointer; }
-  td.score:hover { background:var(--surface); }
-  td.score.sel { background:var(--surface2); box-shadow:inset 0 0 0 1px var(--line2); }
+  td.score { padding:0; }
+  td.score button { all:unset; display:block; width:100%; padding:7px 10px; text-align:right; cursor:pointer; font-family:var(--mono); font-variant-numeric:tabular-nums; color:inherit; box-sizing:border-box; }
+  td.score button:hover { background:var(--surface); }
+  td.score button:focus-visible { outline:2px solid var(--fog); outline-offset:-2px; }
+  td.score.sel button { background:var(--surface2); box-shadow:inset 0 0 0 1px var(--line2); }
   .delta { font-size:11px; margin-left:4px; }
 
   /* versions */
@@ -131,9 +138,8 @@
   .empty { color:var(--muted); font-size:13px; padding:8px 0; }
 
   /* detail sheet */
-  .sheet { position:fixed; top:52px; right:0; bottom:0; width:520px; max-width:92vw; background:var(--surface); border-left:1px solid var(--line2); transform:translateX(100%); transition:transform .18s ease; overflow:auto; padding:18px 20px 30px; z-index:5; }
-  .sheet.open { transform:none; }
-  @media (prefers-reduced-motion: reduce) { .sheet { transition:none; } }
+  .sheet { position:fixed; top:52px; right:0; bottom:0; width:520px; max-width:92vw; background:var(--surface); border-left:1px solid var(--line2); overflow:auto; padding:18px 20px 30px; z-index:5; }
+  .sheet[hidden] { display:none; }
   .sheet .head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .sheet h3 { font-size:15px; }
   .sheet .meta { color:var(--muted); font-size:12.5px; margin-top:3px; }
@@ -154,7 +160,8 @@
   details summary::before { content:"▸ "; }
   details[open] summary::before { content:"▾ "; }
 
-  @media (max-width:1100px) { .app { grid-template-columns:1fr; grid-template-rows:52px auto 1fr; } aside { border-right:0; border-bottom:1px solid var(--line); max-height:40vh; } .two { grid-template-columns:1fr; } .loop { grid-template-columns:1fr 1fr; } .arrow { display:none; } }
+  @media (max-width:1100px) { .app { grid-template-columns:1fr; grid-template-rows:52px auto 1fr; height:auto; min-height:100vh; } aside { border-right:0; border-bottom:1px solid var(--line); max-height:none; } .two { grid-template-columns:1fr; } .loop { grid-template-columns:1fr 1fr; } .arrow { display:none; } }
+  @media (max-width:700px) { .loop { grid-template-columns:1fr; } .kpis { grid-template-columns:1fr 1fr; } .test { grid-template-columns:1fr; } header .tagline { display:none; } main { padding:14px; } }
 </style>
 </head>
 <body>
@@ -163,7 +170,7 @@
     <div class="brand"><i></i>prompt-coach</div>
     <div class="tagline">a coach rewrites a weak agent's prompt until it catches up with a strong one</div>
     <div class="spacer"></div>
-    <span class="pill" id="status">idle</span>
+    <span class="pill" id="status" role="status" aria-live="polite">idle</span>
   </header>
 
   <aside>
@@ -203,13 +210,13 @@
         <div class="ph"><h2>Improvement over time</h2><span class="sub" id="runTitle"></span></div>
         <div class="pb">
           <div class="kpis" id="kpis"></div>
-          <svg class="chart" id="chart" viewBox="0 0 640 190" preserveAspectRatio="none"></svg>
+          <svg class="chart" id="chart" viewBox="0 0 640 190" role="img" aria-label="student and teacher mean per round"></svg>
           <div class="legend"><span><i style="background:var(--text2)"></i>teacher mean</span><span><i style="background:var(--student)"></i>student mean</span><span><i style="background:var(--line2); height:0; border-top:2px dashed var(--line2)"></i>teacher − gap (stop line)</span></div>
         </div>
       </section>
       <section class="panel">
         <div class="ph"><h2>Scores by case</h2><span class="sub">click a score to read the reply and the judge's reason</span></div>
-        <div class="pb" id="grid"><div class="empty">Pick cases and start a run, or open a saved one.</div></div>
+        <div class="pb gridwrap" id="grid"><div class="empty">Pick cases and start a run, or open a saved one.</div></div>
       </section>
     </div>
 
@@ -234,11 +241,11 @@
       <div class="pb test">
         <div>
           <div class="row">
-            <select id="testCase"></select>
-            <select id="testAgent"><option value="student">student</option><option value="teacher">teacher</option></select>
+            <select id="testCase" aria-label="case"></select>
+            <select id="testAgent" aria-label="agent"><option value="student">student</option><option value="teacher">teacher</option></select>
             <button class="btn sm" id="useLatest">paste latest coached prompt</button>
           </div>
-          <textarea id="testPrompt" placeholder="prompt (leave empty for the task's v1 prompt)" style="margin-top:10px"></textarea>
+          <textarea id="testPrompt" aria-label="prompt override" placeholder="prompt (leave empty for the task's v1 prompt)" style="margin-top:10px"></textarea>
           <div class="row" style="margin-top:10px"><button class="btn primary" id="testRun">Run &amp; grade</button><span class="note" id="testNote"></span></div>
         </div>
         <div class="out" id="testOut"><div class="empty">The reply and the judge's verdict appear here.</div></div>
@@ -253,7 +260,7 @@
   </main>
 </div>
 
-<aside class="sheet" id="sheet" aria-live="polite">
+<aside class="sheet" id="sheet" role="dialog" aria-modal="false" aria-labelledby="shTitle" hidden>
   <div class="head"><div><h3 id="shTitle"></h3><div class="meta" id="shMeta"></div></div><button class="x" id="shClose" aria-label="close">×</button></div>
   <div class="score" id="shScore"></div>
   <div class="reason" id="shReason"></div>
@@ -264,270 +271,372 @@
 
 <script>
 // ---------- state ----------
-// `run` mirrors the server's RunRecord. Live events update it; saved runs replace it.
-let meta = null, run = null, pending = {}, selectedVersion = null, es = null, selectedCell = null;
-let liveRounds = new Set();
+// Two runs, never one: `live` is the run the server is executing (fed by SSE); `viewed` is what
+// the page renders (the live run, or a saved one opened from the sidebar). Events only touch `live`.
+let meta = null;
+let live = null;                 // RunRecord being executed, or null
+let livePending = {};            // round -> { prompt, graded: [] } for rounds in progress
+let liveState = 'idle';          // idle | running | finished | error | disconnected
+let viewedId = null;             // id of the run being displayed; equals live.id when following live
+let selectedVersion = null, selectedCell = null, es = null, lastFocus = null;
 
 const $ = (id) => document.getElementById(id);
 const f2 = (x) => (x === undefined || x === null) ? '–' : x.toFixed(2);
 const cls = (x) => x >= 0.8 ? 'good' : x < 0.6 ? 'bad' : 'mid';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const sortedRounds = () => run ? [...run.rounds].sort((a, b) => a.round - b.round) : [];
 const mean = (o) => { const v = Object.values(o); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined; };
+const savedRuns = new Map();     // id -> RunRecord loaded from /runs/{id}
+
+const followingLive = () => live !== null && viewedId === live.id;
+const viewed = () => followingLive() ? live : (savedRuns.get(viewedId) || null);
+const pending = () => followingLive() ? livePending : {};
+const sortedRounds = (run) => run ? [...run.rounds].sort((a, b) => a.round - b.round) : [];
+const isRunning = () => liveState === 'running';
 
 // ---------- boot ----------
 async function boot() {
-  meta = await (await fetch('/cases')).json();
+  try {
+    meta = await (await fetch('/cases')).json();
+  } catch (e) { setStatus('cannot reach server', 'err'); return; }
   $('models').innerHTML = `teacher <span class="t mono">${esc(meta.models.teacher)}</span><br>student <span class="s mono">${esc(meta.models.student)}</span><br>evaluator <span class="mono">${esc(meta.models.evaluator)}</span><br>coach <span class="mono">${esc(meta.models.coach)}</span>`;
   $('rounds').value = meta.loop.max_rounds; $('gap').value = meta.loop.gap;
   $('cases').innerHTML = meta.cases.map(c => `<label class="case"><input type="checkbox" value="${esc(c.id)}" checked><span><b>${esc(c.id)}</b><small>${esc(firstLine(c.input))}</small></span></label>`).join('');
   $('testCase').innerHTML = meta.cases.map(c => `<option>${esc(c.id)}</option>`).join('');
   await loadRuns();
   renderAll();
-  connect();
+  connect();   // attaches to a run in progress (server replays its buffered events) or ends at once
 }
 function firstLine(input) { const l = input.split('\n').map(s => s.trim()).filter(s => s && !s.endsWith(':')); return (l[0] || '').slice(0, 96) + '…'; }
 
 async function loadRuns() {
-  const runs = await (await fetch('/runs')).json();
-  window._runs = runs;
-  if (!runs.length) { $('runs').innerHTML = '<div class="empty">no runs yet</div>'; return; }
-  $('runs').innerHTML = runs.map(r => `
-    <button class="run-item${run && run.id === r.id ? ' active' : ''}" data-id="${esc(r.id)}">
-      <div class="id mono">${esc(r.id)}</div>
-      <div class="row"><span>${r.rounds} round${r.rounds === 1 ? '' : 's'} · <span class="s mono">${r.student_means.map(f2).join(' → ')}</span></span>${spark(r.teacher_means, r.student_means)}</div>
+  let runs = [];
+  try { runs = await (await fetch('/runs')).json(); } catch (e) { logText('could not load the run list'); return; }
+  const items = runs.map(r => ({ ...r, isLive: live && live.id === r.id }));
+  if (live && !items.some(r => r.id === live.id)) {
+    items.unshift({ id: live.id, rounds: live.rounds.length, student_means: sortedRounds(live).map(r => r.student.mean), teacher_means: sortedRounds(live).map(r => r.teacher.mean), isLive: true });
+  }
+  if (!items.length) { $('runs').innerHTML = '<div class="empty">no runs yet</div>'; return; }
+  $('runs').innerHTML = items.map(r => `
+    <button class="run-item${viewedId === r.id ? ' active' : ''}" data-id="${esc(r.id)}" aria-pressed="${viewedId === r.id}">
+      <div class="id mono">${esc(r.id)}${r.isLive && isRunning() ? ' <span class="live-tag">● live</span>' : ''}</div>
+      <div class="row"><span>${r.rounds} round${r.rounds === 1 ? '' : 's'}${r.student_means.length ? ' · <span class="mono">' + r.student_means.map(f2).join(' → ') + '</span>' : ''}</span>${spark(r.teacher_means, r.student_means)}</div>
     </button>`).join('');
   $('runs').querySelectorAll('button').forEach(b => b.onclick = () => openRun(b.dataset.id));
 }
 function spark(t, s) {
   if (!s.length) return '';
   const W = 64, H = 16, x = (i) => s.length === 1 ? W / 2 : i * W / (s.length - 1), y = (v) => H - 2 - v * (H - 4);
+  if (s.length === 1) return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><circle cx="${x(0)}" cy="${y(t[0])}" r="1.5" fill="#d0d6e0" fill-opacity=".5"/><circle cx="${x(0)}" cy="${y(s[0])}" r="2" fill="#f5a524"/></svg>`;
   const pts = (arr) => arr.map((v, i) => `${x(i)},${y(v)}`).join(' ');
-  return `<svg viewBox="0 0 ${W} ${H}"><polyline fill="none" stroke="#d0d6e0" stroke-opacity=".5" stroke-width="1" points="${pts(t)}"/><polyline fill="none" stroke="#f5a524" stroke-width="1.5" points="${pts(s)}"/></svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline fill="none" stroke="#d0d6e0" stroke-opacity=".5" stroke-width="1" points="${pts(t)}"/><polyline fill="none" stroke="#f5a524" stroke-width="1.5" points="${pts(s)}"/></svg>`;
 }
 $('refreshRuns').onclick = loadRuns;
 
 async function openRun(id) {
-  const res = await fetch(`/runs/${encodeURIComponent(id)}`);
-  if (!res.ok) { logLine(`could not load run ${id}`); return; }
-  run = await res.json(); pending = {}; liveRounds = new Set(); selectedVersion = null; selectedCell = null;
-  setStatus(`viewing ${id}`, '');
-  logLine(`opened saved run ${id} · ${run.stop_reason || 'in progress'}`);
-  renderAll(); loadRuns();
+  if (live && id === live.id) { viewedId = id; resetSelection(); syncControls(); renderAll(); loadRuns(); return; }
+  if (!savedRuns.has(id)) {
+    let res;
+    try { res = await fetch(`/runs/${encodeURIComponent(id)}`); } catch (e) { logText(`could not load run ${id}`); return; }
+    if (!res.ok) { logText(`could not load run ${id} (${res.status})`); return; }
+    savedRuns.set(id, await res.json());
+  }
+  viewedId = id; resetSelection();
+  const r = savedRuns.get(id);
+  logText(`opened saved run ${id} · ${r.stop_reason || 'no rounds recorded'}`);
+  syncControls(); renderAll(); loadRuns();
 }
+function resetSelection() { selectedVersion = null; selectedCell = null; closeSheet(); }
 
 // ---------- start / events ----------
 $('start').onclick = async () => {
   const cases = [...$('cases').querySelectorAll('input:checked')].map(i => i.value);
+  const rounds = Number($('rounds').value), gap = Number($('gap').value);
   if (!cases.length) { $('startNote').textContent = 'pick at least one case'; return; }
-  $('start').disabled = true; $('startNote').textContent = '';
-  const res = await fetch('/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ cases, rounds: +$('rounds').value, gap: +$('gap').value }) });
-  if (!res.ok) { $('startNote').textContent = (await res.json()).detail; $('start').disabled = false; return; }
-  run = null; pending = {}; liveRounds = new Set(); selectedVersion = null; selectedCell = null; $('log').innerHTML = ''; renderAll();
-  connect();
+  if (!Number.isInteger(rounds) || rounds < 1 || rounds > 10) { $('startNote').textContent = 'rounds must be a whole number from 1 to 10'; return; }
+  if (!(gap >= 0 && gap <= 1)) { $('startNote').textContent = 'gap must be between 0 and 1'; return; }
+  $('startNote').textContent = '';
+  $('start').disabled = true;
+  try {
+    const res = await fetch('/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ cases, rounds, gap }) });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      $('startNote').textContent = typeof body.detail === 'string' ? body.detail : `server said ${res.status}`;
+      if (res.status === 409) { liveState = 'running'; connect(); }   // another tab started one; follow it
+      return;
+    }
+    $('log').innerHTML = '';
+    liveState = 'running';
+    connect();
+  } catch (e) {
+    $('startNote').textContent = 'could not reach the server';
+  } finally {
+    syncControls();
+  }
 };
 
 function connect() {
   if (es) es.close();
   es = new EventSource('/events');
   ['run_started', 'round_started', 'graded', 'round_finished', 'prompt_proposed', 'run_finished', 'error', 'log'].forEach(t => es.addEventListener(t, (e) => handle(t, JSON.parse(e.data))));
-  es.addEventListener('end', () => { es.close(); es = null; $('start').disabled = false; if (run && !run.stop_reason && liveRounds.size === 0) setStatus('stopped', ''); });
-  es.onerror = () => setStatus('disconnected', 'err');
+  es.addEventListener('end', () => {
+    es.close(); es = null;
+    if (liveState === 'running') liveState = 'finished';          // server ended without a run_finished (should not happen)
+    if (liveState === 'idle' && live === null) setStatus('idle', '');
+    syncControls(); renderAll();
+  });
+  es.onerror = () => { if (isRunning()) { liveState = 'disconnected'; setStatus('disconnected — reload to reattach', 'err'); syncControls(); } };
 }
 
 function handle(type, ev) {
   switch (type) {
-    case 'run_started':
-      run = ev.run; pending = {}; liveRounds = new Set(); selectedVersion = null; selectedCell = null;
-      setStatus(`running ${run.id}`, 'live'); $('start').disabled = true;
-      logLine(`run ${run.id} · cases ${run.case_ids.join(', ')} · stop when student ≥ teacher − ${run.gap}, max ${run.max_rounds} rounds`);
+    case 'run_started': {
+      const sameRun = live && live.id === ev.run.id;
+      live = ev.run; livePending = {}; liveState = 'running';
+      if (!sameRun) { $('log').innerHTML = ''; viewedId = live.id; resetSelection(); }   // a replay of the same run keeps the current view
+      else if (followingLive()) closeSheet();
+      logText(`run ${live.id} · cases ${live.case_ids.join(', ')} · stop when student ≥ teacher − ${live.gap}, max ${live.max_rounds} rounds`);
       break;
+    }
     case 'round_started':
-      pending[ev.round] = []; liveRounds.add(ev.round);
-      logLine(`round ${ev.round} · student prompt v${ev.prompt.version} · running ${run.case_ids.length}×2 agents, then grading…`);
+      livePending[ev.round] = { prompt: ev.prompt, graded: [] };
+      logText(`round ${ev.round} · student prompt v${ev.prompt.version} · running ${live.case_ids.length}×2 agents, then grading…`);
       break;
     case 'graded':
-      (pending[ev.round] ||= []).push(ev.graded);
-      logLine(`<span class="${ev.graded.record.agent === 'teacher' ? 't' : 's'}">${ev.graded.record.agent}</span> ${ev.graded.record.case_id} → <b class="${cls(ev.graded.verdict.score)}">${f2(ev.graded.verdict.score)}</b> <span class="muted">${esc(ev.graded.verdict.reason.slice(0, 120))}…</span>`);
+      (livePending[ev.round] ||= { prompt: null, graded: [] }).graded.push(ev.graded);
+      logHtml(`<span class="${ev.graded.record.agent === 'teacher' ? 't' : 's'}">${esc(ev.graded.record.agent)}</span> ${esc(ev.graded.record.case_id)} → <b class="${cls(ev.graded.verdict.score)}">${f2(ev.graded.verdict.score)}</b> <span class="muted">${esc(ev.graded.verdict.reason.slice(0, 120))}…</span>`);
       break;
     case 'round_finished':
-      run.rounds = run.rounds.filter(r => r.round !== ev.result.round).concat([ev.result]);
-      delete pending[ev.round]; liveRounds.delete(ev.round);
-      logLine(`round ${ev.round} done · teacher <b class="t">${f2(ev.result.teacher.mean)}</b> · student <b class="s">${f2(ev.result.student.mean)}</b>`);
+      live.rounds = live.rounds.filter(r => r.round !== ev.result.round).concat([ev.result]);
+      delete livePending[ev.round];
+      logHtml(`round ${ev.round} done · teacher <b class="t">${f2(ev.result.teacher.mean)}</b> · student <b class="s">${f2(ev.result.student.mean)}</b>`);
       break;
     case 'prompt_proposed':
-      logLine(`coach → student prompt v${ev.prompt.version}: ${esc(ev.prompt.changelog)}`);
-      selectedVersion = ev.prompt.version;
+      logText(`coach → student prompt v${ev.prompt.version}: ${ev.prompt.changelog}`);
+      if (followingLive()) selectedVersion = ev.prompt.version;
       break;
     case 'run_finished':
-      run = ev.run; liveRounds = new Set(); setStatus(`finished · ${run.stop_reason}`, ''); $('start').disabled = false;
-      logLine(`<b>finished</b> · ${esc(run.stop_reason)}`); loadRuns();
+      live = ev.run; livePending = {}; liveState = 'finished';
+      savedRuns.set(live.id, live);
+      logHtml(`<b>finished</b> · ${esc(live.stop_reason)}`); loadRuns();
       break;
     case 'error':
-      logLine(`<b class="bad">error</b> ${esc(ev.message)}`); setStatus('error', 'err'); $('start').disabled = false; liveRounds = new Set();
+      if (ev.run) { live = ev.run; savedRuns.set(live.id, live); }
+      livePending = {}; liveState = 'error';
+      logHtml(`<b class="bad">error</b> ${esc(ev.message)}`); loadRuns();
       break;
     case 'log':
-      logLine(esc(ev.message));
+      logText(ev.message);
   }
-  renderAll();
+  syncControls(); renderAll();
+}
+
+function syncControls() {
+  $('start').disabled = isRunning() || liveState === 'disconnected';
+  if (liveState === 'running') setStatus(`running ${live ? live.id : ''}`, 'live');
+  else if (liveState === 'error') setStatus(`error · ${live && live.stop_reason ? live.stop_reason : 'see log'}`, 'err');
+  else if (liveState === 'finished' && live) setStatus(followingLive() ? `finished · ${live.stop_reason}` : `viewing ${viewedId}`, '');
+  else if (viewedId) setStatus(`viewing ${viewedId}`, '');
+  else setStatus('idle', '');
 }
 
 // ---------- rendering ----------
 function setStatus(text, kind) { const s = $('status'); s.textContent = text; s.className = 'pill' + (kind ? ' ' + kind : ''); }
-function logLine(html) { const d = document.createElement('div'); d.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span>${html}`; $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight; }
+function logText(text) { logHtml(esc(text)); }
+function logHtml(trustedHtml) { const d = document.createElement('div'); d.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span>${trustedHtml}`; $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight; }
 
-function versions() {
+function versions(run) {
   const list = [];
-  for (const r of sortedRounds()) {
+  for (const r of sortedRounds(run)) {
     if (!list.some(v => v.version === r.student_prompt.version)) list.push(r.student_prompt);
     if (r.next_prompt && !list.some(v => v.version === r.next_prompt.version)) list.push(r.next_prompt);
   }
-  return list;
+  for (const p of Object.values(pending())) if (p.prompt && !list.some(v => v.version === p.prompt.version)) list.push(p.prompt);
+  return list.sort((a, b) => a.version - b.version);
 }
-function allGraded() { const out = []; for (const r of sortedRounds()) for (const g of r.graded) out.push({ round: r.round, g }); return out; }
+function allGraded(run) { const out = []; for (const r of sortedRounds(run)) for (const g of r.graded) out.push({ round: r.round, g }); return out; }
+function currentRound() { const ks = Object.keys(pending()).map(Number); return ks.length ? { round: Math.max(...ks), ...pending()[Math.max(...ks)] } : null; }
 
-function renderAll() { renderLoop(); renderProgress(); renderGrid(); renderVersions(); renderRecommendation(); }
+function renderAll() { const run = viewed(); renderLoop(run); renderProgress(run); renderGrid(run); renderVersions(run); renderRecommendation(run); }
 
-function renderLoop() {
-  const rounds = sortedRounds(), last = rounds[rounds.length - 1];
-  const live = liveRounds.size > 0, liveRound = [...liveRounds][0];
+function renderLoop(run) {
+  const rounds = sortedRounds(run), last = rounds[rounds.length - 1], cur = followingLive() ? currentRound() : null;
+  const running = followingLive() && isRunning();
   const m = run ? run.models : (meta ? meta.models : {});
-  const state = (running) => `<span class="state ${running ? 'good' : 'muted'}">${running ? 'working' : (run ? 'done' : 'idle')}</span>`;
-  const gradedCount = allGraded().length + Object.values(pending).reduce((a, b) => a + b.length, 0);
-  const vs = versions();
+  const n = run ? run.case_ids.length : 0;
+  const state = (working) => `<span class="state ${working ? 'good' : 'muted'}">${working ? 'working' : (run ? 'done' : 'idle')}</span>`;
+  const gradedNow = cur ? cur.graded : [];
+  const gradedCount = allGraded(run).length + gradedNow.length;
+  const vs = versions(run);
   const teacherAvg = rounds.length ? rounds.reduce((a, r) => a + r.teacher.mean, 0) / rounds.length : undefined;
-  const lat = (agent) => { const xs = allGraded().filter(x => x.g.record.agent === agent).map(x => x.g.record.latency_s); return xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1) + 's avg' : ''; };
+  const lat = (agent) => { const xs = allGraded(run).filter(x => x.g.record.agent === agent).map(x => x.g.record.latency_s); return xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1) + 's avg' : ''; };
+  const studentVersion = cur && cur.prompt ? cur.prompt.version : (last ? last.student_prompt.version : null);
+  const studentMean = last ? last.student.mean : undefined, teacherMean = last ? last.teacher.mean : undefined;
   $('loop').innerHTML = `
-    <div class="agent"><div class="role">teacher ${state(live && (pending[liveRound] || []).filter(g => g.record.agent === 'teacher').length < (run ? run.case_ids.length : 0))}</div>
+    <div class="agent"><div class="role">teacher ${state(running && cur && gradedNow.filter(g => g.record.agent === 'teacher').length < n)}</div>
       <div class="model mono">${esc(m.teacher || '')}</div>
-      <div class="big t">${f2(last ? last.teacher.mean : undefined)}<small>${rounds.length > 1 ? `avg ${f2(teacherAvg)}` : (last ? 'mean' : '')}</small></div>
+      <div class="big ${teacherMean === undefined ? 'muted' : cls(teacherMean)}">${f2(teacherMean)}<small>${rounds.length > 1 ? `avg ${f2(teacherAvg)}` : (last ? `mean, round ${last.round}` : '')}</small></div>
       <div class="what">Strong model. Fixed prompt v1, every round. The bar the student is chasing. ${lat('teacher')}</div></div>
-    <div class="arrow">→</div>
-    <div class="agent student"><div class="role">student ${state(live && (pending[liveRound] || []).filter(g => g.record.agent === 'student').length < (run ? run.case_ids.length : 0))}</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="agent student"><div class="role"><span class="s">student</span> ${state(running && cur && gradedNow.filter(g => g.record.agent === 'student').length < n)}</div>
       <div class="model mono">${esc(m.student || '')}</div>
-      <div class="big s">${f2(last ? last.student.mean : undefined)}<small>${last ? `prompt v${last.student_prompt.version}` : ''}</small></div>
+      <div class="big ${studentMean === undefined ? 'muted' : cls(studentMean)}">${f2(studentMean)}<small>${studentVersion ? `${cur && cur.prompt ? 'now running' : 'prompt'} v${studentVersion}` : ''}</small></div>
       <div class="what">Weak model, same agent, same cases. Only its prompt changes between rounds. ${lat('student')}</div></div>
-    <div class="arrow">→</div>
-    <div class="agent"><div class="role">evaluator ${state(live && (pending[liveRound] || []).length < (run ? run.case_ids.length * 2 : 0))}</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="agent"><div class="role">evaluator ${state(running && cur && gradedNow.length < n * 2)}</div>
       <div class="model mono">${esc(m.evaluator || '')}</div>
       <div class="big">${gradedCount}<small>verdicts</small></div>
       <div class="what">Judge with the answer key. One score 0–1 and a reason per reply; never told who wrote it.</div></div>
-    <div class="arrow">→</div>
-    <div class="agent"><div class="role">coach ${state(false)}</div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="agent"><div class="role">coach ${state(running && !cur && last && !last.next_prompt && !run.stop_reason)}</div>
       <div class="model mono">${esc(m.coach || '')}</div>
       <div class="big">${Math.max(0, vs.length - 1)}<small>rewrite${vs.length === 2 ? '' : 's'}</small></div>
       <div class="what">Reads the student's low scores and the reasons. Never sees the answer key. Rewrites the prompt.</div></div>`;
-  $('story').innerHTML = storyline(rounds);
+  $('story').innerHTML = storyline(run, rounds, cur);
 }
-function storyline(rounds) {
+function storyline(run, rounds, cur) {
   if (!run) return 'Start a run: both agents answer every case with the same prompt, the evaluator scores all replies, and if the student is more than <b>gap</b> behind, the coach writes prompt v2. Repeat.';
-  if (!rounds.length) return `Round 1 is running: <b>${run.case_ids.length} cases × 2 agents</b> then ${run.case_ids.length * 2} verdicts.`;
+  const liveView = followingLive() && isRunning();
+  if (!rounds.length) {
+    if (liveView) return `Round 1 is running: <b>${run.case_ids.length} cases × 2 agents</b>, then ${run.case_ids.length * 2} verdicts.`;
+    return run.stop_reason ? `This run recorded no rounds. <b>${esc(run.stop_reason)}</b>` : 'This run recorded no rounds.';
+  }
   const first = rounds[0], last = rounds[rounds.length - 1];
   const parts = [`Round 1: teacher <b>${f2(first.teacher.mean)}</b>, student <b>${f2(first.student.mean)}</b>.`];
   for (let i = 1; i < rounds.length; i++) {
     const p = rounds[i - 1], r = rounds[i], d = r.student.mean - p.student.mean;
-    parts.push(`Prompt v${r.student_prompt.version} ${d >= 0 ? 'lifted' : 'dropped'} the student to <b>${f2(r.student.mean)}</b> (${d >= 0 ? '+' : ''}${d.toFixed(2)}).`);
+    const verb = Math.abs(d) < 0.005 ? 'left the student unchanged at' : d > 0 ? 'lifted the student to' : 'dropped the student to';
+    parts.push(`Prompt v${r.student_prompt.version} ${verb} <b>${f2(r.student.mean)}</b> (${d >= 0 ? '+' : ''}${d.toFixed(2)}).`);
   }
-  if (run.stop_reason) parts.push(`Stopped: <b>${esc(run.stop_reason)}</b>.`);
+  const lead = last.student.mean - last.teacher.mean;
+  if (lead > 0.005) parts.push(`The student now <b>leads</b> the teacher by ${lead.toFixed(2)}.`);
+  if (run.stop_reason) {
+    const missed = /budget/.test(run.stop_reason) ? ' The target (teacher − gap) was not reached.' : '';
+    parts.push(`Stopped: <b>${esc(run.stop_reason)}</b>.${missed}`);
+  } else if (cur) parts.push(`Round ${cur.round} is running with prompt v${cur.prompt ? cur.prompt.version : '?'}.`);
   else if (last.next_prompt) parts.push(`Coach proposed v${last.next_prompt.version}; round ${last.round + 1} is next.`);
+  else if (liveView) parts.push('The coach is writing the next prompt.');
   return parts.join(' ');
 }
 
-function renderProgress() {
-  const rounds = sortedRounds();
+function renderProgress(run) {
+  const rounds = sortedRounds(run);
   $('runTitle').textContent = run ? run.id : '';
   if (!rounds.length) { $('kpis').innerHTML = kpi('rounds', '0') + kpi('student start', '–') + kpi('student now', '–') + kpi('gap to teacher', '–'); $('chart').innerHTML = ''; return; }
   const first = rounds[0], last = rounds[rounds.length - 1];
   const delta = last.student.mean - first.student.mean, gap = last.teacher.mean - last.student.mean;
+  const gapText = gap <= 0 ? `<span class="good">leads by ${(-gap).toFixed(2)}</span>` : `<span class="${gap <= run.gap ? 'good' : ''}">${gap.toFixed(2)}</span>`;
   $('kpis').innerHTML =
     kpi('rounds', `${rounds.length}<small> / ${run.max_rounds}</small>`) +
-    kpi('student start', `<span class="s">${f2(first.student.mean)}</span><small> v1</small>`) +
-    kpi('student now', `<span class="s">${f2(last.student.mean)}</span><small class="${delta >= 0 ? 'good' : 'bad'}"> ${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</small>`) +
-    kpi('gap to teacher', `<span class="${gap <= run.gap ? 'good' : ''}">${gap.toFixed(2)}</span><small> stop at ≤ ${run.gap}</small>`);
-  drawChart(rounds);
+    kpi('student start', `<span class="${cls(first.student.mean)}">${f2(first.student.mean)}</span><small> v1</small>`) +
+    kpi('student now', `<span class="${cls(last.student.mean)}">${f2(last.student.mean)}</span><small class="${delta > 0 ? 'good' : delta < 0 ? 'bad' : ''}"> ${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</small>`) +
+    kpi('gap to teacher', `${gapText}<small> stop at ≤ ${run.gap}</small>`);
+  drawChart(run, rounds);
 }
 const kpi = (l, v) => `<div class="kpi"><div class="l">${l}</div><div class="v mono">${v}</div></div>`;
 
-function drawChart(rounds) {
-  const svg = $('chart'), W = 640, H = 190, pl = 36, pr = 16, pt = 18, pb = 26;
+function drawChart(run, rounds) {
+  const svg = $('chart'), W = Math.max(320, svg.clientWidth || 640), H = 190, pl = 36, pr = 16, pt = 18, pb = 26;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const n = rounds.length, xs = (i) => n === 1 ? (pl + (W - pl - pr) / 2) : pl + i * (W - pl - pr) / (n - 1);
-  const lo = Math.max(0, Math.min(...rounds.flatMap(r => [r.student.mean, r.teacher.mean - run.gap])) - 0.15), hi = 1.0;
+  const lo = Math.max(0, Math.floor((Math.min(...rounds.flatMap(r => [r.student.mean, r.teacher.mean - run.gap])) - 0.1) * 10) / 10), hi = 1.0;
   const ys = (v) => pt + (hi - v) * (H - pt - pb) / (hi - lo);
-  const grid = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0].filter(v => v >= lo).map(v => `<line x1="${pl}" x2="${W - pr}" y1="${ys(v)}" y2="${ys(v)}" stroke="#23252a"/><text x="${pl - 8}" y="${ys(v) + 3}" fill="#8a8f98" font-size="10" text-anchor="end" font-family="ui-monospace,Menlo,monospace">${v.toFixed(1)}</text>`).join('');
-  const line = (key, color, w) => `<polyline fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" points="${rounds.map((r, i) => `${xs(i)},${ys(r[key].mean)}`).join(' ')}"/>`;
-  const dots = (key, color, dy) => rounds.map((r, i) => `<circle cx="${xs(i)}" cy="${ys(r[key].mean)}" r="3.5" fill="#08090a" stroke="${color}" stroke-width="2"/><text x="${xs(i)}" y="${ys(r[key].mean) + dy}" fill="${color}" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">${f2(r[key].mean)}</text>`).join('');
-  const stop = `<polyline fill="none" stroke="#34343a" stroke-width="1.5" stroke-dasharray="4 4" points="${rounds.map((r, i) => `${xs(i)},${ys(Math.max(lo, r.teacher.mean - run.gap))}`).join(' ')}"/>`;
+  const ticks = []; for (let v = lo; v <= hi + 1e-9; v += 0.1) ticks.push(Math.round(v * 10) / 10);
+  const grid = ticks.map(v => `<line x1="${pl}" x2="${W - pr}" y1="${ys(v)}" y2="${ys(v)}" stroke="#23252a"/><text x="${pl - 8}" y="${ys(v) + 3}" fill="#8a8f98" font-size="10" text-anchor="end" font-family="ui-monospace,Menlo,monospace">${v.toFixed(1)}</text>`).join('');
+  const dense = n > 6, every = dense ? Math.ceil(n / 6) : 1;
+  const line = (key, color, w) => n === 1 ? '' : `<polyline fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" points="${rounds.map((r, i) => `${xs(i)},${ys(r[key].mean)}`).join(' ')}"/>`;
+  const dots = (key, color, dy) => rounds.map((r, i) => `<circle cx="${xs(i)}" cy="${ys(r[key].mean)}" r="3.5" fill="#08090a" stroke="${color}" stroke-width="2"/>` + ((!dense || i % every === 0 || i === n - 1) ? `<text x="${xs(i)}" y="${ys(r[key].mean) + dy}" fill="${color}" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">${f2(r[key].mean)}</text>` : '')).join('');
+  const stopPts = rounds.map((r, i) => `${xs(i)},${ys(Math.max(lo, r.teacher.mean - run.gap))}`);
+  const stop = n === 1 ? `<line x1="${xs(0) - 40}" x2="${xs(0) + 40}" y1="${stopPts[0].split(',')[1]}" y2="${stopPts[0].split(',')[1]}" stroke="#34343a" stroke-width="1.5" stroke-dasharray="4 4"/>` : `<polyline fill="none" stroke="#34343a" stroke-width="1.5" stroke-dasharray="4 4" points="${stopPts.join(' ')}"/>`;
   const band = n > 1 ? `<polygon fill="rgba(245,165,36,.06)" points="${rounds.map((r, i) => `${xs(i)},${ys(r.teacher.mean)}`).join(' ')} ${rounds.map((r, i) => `${xs(n - 1 - i)},${ys(rounds[n - 1 - i].student.mean)}`).join(' ')}"/>` : '';
-  const xlab = rounds.map((r, i) => `<text x="${xs(i)}" y="${H - 8}" fill="#8a8f98" font-size="11" text-anchor="middle">round ${r.round} · v${r.student_prompt.version}</text>`).join('');
+  const xlab = rounds.map((r, i) => (!dense || i % every === 0 || i === n - 1) ? `<text x="${xs(i)}" y="${H - 8}" fill="#8a8f98" font-size="11" text-anchor="middle">${dense ? `r${r.round}` : `round ${r.round} · v${r.student_prompt.version}`}</text>` : '').join('');
   svg.innerHTML = grid + band + stop + line('teacher', '#d0d6e0', 1.5) + line('student', '#f5a524', 2) + dots('teacher', '#d0d6e0', -9) + dots('student', '#f5a524', 16) + xlab;
 }
 
-function renderGrid() {
+function renderGrid(run) {
   if (!run) { $('grid').innerHTML = '<div class="empty">Pick cases and start a run, or open a saved one.</div>'; return; }
-  const rounds = sortedRounds();
+  const rounds = sortedRounds(run);
   const cols = [...rounds.map(r => ({ n: r.round, v: r.student_prompt.version, t: r.teacher.scores, s: r.student.scores, done: true })),
-                ...[...liveRounds].filter(n => !rounds.some(r => r.round === n)).map(n => { const t = {}, s = {}; for (const g of (pending[n] || [])) (g.record.agent === 'teacher' ? t : s)[g.record.case_id] = g.verdict.score; return { n, t, s, done: false }; })];
-  if (!cols.length) { $('grid').innerHTML = '<div class="empty">round 1 running…</div>'; return; }
+                ...Object.entries(pending()).filter(([n]) => !rounds.some(r => r.round === +n)).map(([n, p]) => { const t = {}, s = {}; for (const g of p.graded) (g.record.agent === 'teacher' ? t : s)[g.record.case_id] = g.verdict.score; return { n: +n, v: p.prompt ? p.prompt.version : null, t, s, done: false }; })];
+  if (!cols.length) { $('grid').innerHTML = `<div class="empty">${run.stop_reason ? esc(run.stop_reason) : 'round 1 running…'}</div>`; return; }
   const cell = (c, agent, id) => {
     const x = c[agent === 'teacher' ? 't' : 's'][id];
-    if (x === undefined) return `<td class="muted">${c.done ? '–' : '…'}</td>`;
+    if (x === undefined) return `<td class="muted mono">${c.done ? '–' : '…'}</td>`;
     const sel = selectedCell && selectedCell.round === c.n && selectedCell.agent === agent && selectedCell.case === id;
-    return `<td class="score ${cls(x)}${sel ? ' sel' : ''} mono" data-r="${c.n}" data-a="${agent}" data-c="${esc(id)}" title="open reply and reason">${f2(x)}</td>`;
+    return `<td class="score ${cls(x)}${sel ? ' sel' : ''}"><button type="button" data-r="${c.n}" data-a="${agent}" data-c="${esc(id)}" aria-label="${esc(id)}, ${agent}, round ${c.n}, score ${f2(x)}. Open reply and reason.">${f2(x)}</button></td>`;
   };
+  const showDelta = rounds.length > 1;
   const deltaTd = (id) => {
-    if (rounds.length < 2) return '';
-    const a = rounds[0].student.scores[id], b = rounds[rounds.length - 1].student.scores[id], d = b - a;
+    if (!showDelta) return '';
+    const a = rounds[0].student.scores[id], b = rounds[rounds.length - 1].student.scores[id];
+    if (a === undefined || b === undefined) return '<td class="muted">–</td>';
+    const d = b - a;
     return `<td class="mono ${d > 0 ? 'good' : d < 0 ? 'bad' : 'muted'}">${d > 0 ? '+' : ''}${d.toFixed(2)}</td>`;
   };
-  let html = '<table><thead><tr><th></th>' + cols.map(c => `<th colspan="2">round ${c.n} · v${c.v || '?'}${c.done ? '' : ' <span class="good">live</span>'}</th>`).join('') + (rounds.length > 1 ? '<th>Δ student</th>' : '') + '</tr>';
-  html += '<tr><th>case</th>' + cols.map(() => '<th class="t">teacher</th><th class="s">student</th>').join('') + (rounds.length > 1 ? '<th>v1 → now</th>' : '') + '</tr></thead><tbody>';
+  let html = '<table><thead><tr><th></th>' + cols.map(c => `<th colspan="2">round ${c.n}${c.v ? ` · v${c.v}` : ''}${c.done ? '' : ' <span class="live-tag">live</span>'}</th>`).join('') + (showDelta ? '<th>Δ student</th>' : '') + '</tr>';
+  html += '<tr><th>case</th>' + cols.map(() => '<th class="t">teacher</th><th class="s">student</th>').join('') + (showDelta ? '<th>v1 → now</th>' : '') + '</tr></thead><tbody>';
   for (const id of run.case_ids) html += `<tr><td>${esc(id)}</td>` + cols.map(c => cell(c, 'teacher', id) + cell(c, 'student', id)).join('') + deltaTd(id) + '</tr>';
-  html += '</tbody><tfoot><tr><td>mean</td>' + cols.map(c => { const mt = mean(c.t), ms = mean(c.s); return `<td class="mono t">${f2(mt)}</td><td class="mono s">${f2(ms)}</td>`; }).join('') + (rounds.length > 1 ? `<td class="mono">${(() => { const d = rounds[rounds.length - 1].student.mean - rounds[0].student.mean; return `<span class="${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '+' : ''}${d.toFixed(2)}</span>`; })()}</td>` : '') + '</tr></tfoot></table>';
+  const dMean = showDelta ? rounds[rounds.length - 1].student.mean - rounds[0].student.mean : 0;
+  html += '</tbody><tfoot><tr><td>mean</td>' + cols.map(c => { const mt = mean(c.t), ms = mean(c.s); return `<td class="mono ${mt === undefined ? 'muted' : cls(mt)}">${f2(mt)}</td><td class="mono ${ms === undefined ? 'muted' : cls(ms)}">${f2(ms)}</td>`; }).join('') + (showDelta ? `<td class="mono ${dMean > 0 ? 'good' : dMean < 0 ? 'bad' : 'muted'}">${dMean >= 0 ? '+' : ''}${dMean.toFixed(2)}</td>` : '') + '</tr></tfoot></table>';
   $('grid').innerHTML = html;
-  $('grid').querySelectorAll('td.score').forEach(td => td.onclick = () => openCell(+td.dataset.r, td.dataset.a, td.dataset.c));
+  $('grid').querySelectorAll('td.score button').forEach(b => b.onclick = () => openCell(+b.dataset.r, b.dataset.a, b.dataset.c, b));
 }
 
-function openCell(round, agent, caseId) {
-  const r = sortedRounds().find(x => x.round === round);
-  const g = r ? r.graded.find(x => x.record.agent === agent && x.record.case_id === caseId) : (pending[round] || []).find(x => x.record.agent === agent && x.record.case_id === caseId);
+function openCell(round, agent, caseId, source) {
+  const run = viewed(); if (!run) return;
+  const r = sortedRounds(run).find(x => x.round === round);
+  const p = pending()[round];
+  const g = r ? r.graded.find(x => x.record.agent === agent && x.record.case_id === caseId) : (p ? p.graded.find(x => x.record.agent === agent && x.record.case_id === caseId) : null);
   if (!g) return;
-  selectedCell = { round, agent, case: caseId }; renderGrid();
+  selectedCell = { round, agent, case: caseId }; renderGrid(run);
+  lastFocus = source || document.activeElement;
   const c = meta.cases.find(x => x.id === caseId) || {};
-  $('shTitle').innerHTML = `${esc(caseId)} · <span class="${agent === 'teacher' ? 't' : 's'}">${agent}</span>`;
+  $('shTitle').innerHTML = `${esc(caseId)} · <span class="${agent === 'teacher' ? 't' : 's'}">${esc(agent)}</span>`;
   $('shMeta').innerHTML = `round ${round} · prompt v${g.record.prompt_version} · <span class="mono">${esc(g.record.model)}</span> · ${g.record.reply.split(/\s+/).length} words · ${g.record.latency_s}s`;
   $('shScore').innerHTML = `<span class="${cls(g.verdict.score)} mono">${f2(g.verdict.score)}</span>`;
   $('shReason').textContent = g.verdict.reason;
   $('shReply').textContent = g.record.reply;
-  $('shInput').textContent = c.input || '';
+  $('shInput').textContent = c.input || '(case not in the current task folder)';
   $('shExpected').textContent = c.expected || '';
-  $('sheet').classList.add('open');
+  $('sheet').hidden = false;
+  $('shClose').focus();
 }
-$('shClose').onclick = () => { $('sheet').classList.remove('open'); selectedCell = null; renderGrid(); };
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('shClose').onclick(); });
+function closeSheet() {
+  if ($('sheet').hidden) return;
+  $('sheet').hidden = true;
+  const cell = selectedCell; selectedCell = null;
+  renderGrid(viewed());
+  // The grid was just re-rendered, so find the equivalent cell button again before focusing it.
+  const again = cell && $('grid').querySelector(`td.score button[data-r="${cell.round}"][data-a="${cell.agent}"][data-c="${CSS.escape(cell.case)}"]`);
+  if (again) again.focus(); else if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  lastFocus = null;
+}
+$('shClose').onclick = closeSheet;
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('sheet').hidden) $('shClose').onclick(); });
 
-function renderVersions() {
-  const vs = versions();
+function renderVersions(run) {
+  const vs = versions(run);
   if (!vs.length) { $('versions').innerHTML = ''; $('changelog').innerHTML = meta ? '<span class="muted">Prompt v1 comes from the task. Both agents start here.</span>' : ''; $('promptView').textContent = meta ? meta.prompt : '–'; return; }
   if (selectedVersion === null || !vs.some(v => v.version === selectedVersion)) selectedVersion = vs[vs.length - 1].version;
-  const meanFor = (v) => { const r = sortedRounds().find(x => x.student_prompt.version === v); return r ? f2(r.student.mean) : 'next'; };
-  $('versions').innerHTML = vs.map(v => `<button class="vtab${v.version === selectedVersion ? ' active' : ''}" data-v="${v.version}">v${v.version} <span class="m mono">${meanFor(v.version)}</span></button>`).join('');
-  $('versions').querySelectorAll('button').forEach(b => b.onclick = () => { selectedVersion = +b.dataset.v; renderVersions(); });
+  const meanFor = (v) => { const r = sortedRounds(run).find(x => x.student_prompt.version === v); if (r) return `<span class="${cls(r.student.mean)}">${f2(r.student.mean)}</span>`; const p = Object.values(pending()).find(x => x.prompt && x.prompt.version === v); return p ? 'running' : 'next'; };
+  $('versions').innerHTML = vs.map(v => `<button type="button" class="vtab${v.version === selectedVersion ? ' active' : ''}" data-v="${v.version}" aria-pressed="${v.version === selectedVersion}">v${v.version} <span class="m mono">${meanFor(v.version)}</span></button>`).join('');
+  $('versions').querySelectorAll('button').forEach(b => b.onclick = () => { selectedVersion = +b.dataset.v; renderVersions(viewed()); });
   const cur = vs.find(v => v.version === selectedVersion), prev = vs.find(v => v.version === selectedVersion - 1);
   const words = cur.text.split(/\s+/).length;
   $('changelog').innerHTML = `${esc(cur.changelog)}<span class="muted">v${cur.version} · ${words} words${prev ? ` · ${prev.text.split(/\s+/).length} → ${words}` : ''}</span>`;
   $('promptView').innerHTML = (prev && $('showDiff').checked) ? diffHtml(prev.text, cur.text) : esc(cur.text);
 }
-$('showDiff').onchange = renderVersions;
+$('showDiff').onchange = () => renderVersions(viewed());
 
-function renderRecommendation() {
-  const rounds = sortedRounds(), last = rounds[rounds.length - 1];
+function renderRecommendation(run) {
+  const rounds = sortedRounds(run), last = rounds[rounds.length - 1];
   $('recSub').textContent = last ? `after round ${last.round}` : '';
   $('recommendation').innerHTML = last ? esc(last.recommendation) : '<span class="empty">The evaluator compares teacher and student per case and tells the coach what pattern to fix.</span>';
 }
 
-// Line-based LCS diff; inputs are small.
+// Line-based LCS diff. Prompts are short; above a size threshold fall back to a whole-block diff.
 function diffHtml(a, b) {
   const A = a.split('\n'), B = b.split('\n'), n = A.length, m = B.length;
+  if (n * m > 40000) return `<span class="del">- ${esc(a)}</span>\n<span class="add">+ ${esc(b)}</span>`;
   const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
   const out = []; let i = 0, j = 0;
@@ -542,19 +651,25 @@ function diffHtml(a, b) {
 }
 
 // ---------- single-case test ----------
-$('useLatest').onclick = () => { const vs = versions(); $('testPrompt').value = vs.length ? vs[vs.length - 1].text : meta.prompt; };
+$('useLatest').onclick = () => { const vs = versions(viewed()); $('testPrompt').value = vs.length ? vs[vs.length - 1].text : meta.prompt; };
 $('testRun').onclick = async () => {
   $('testRun').disabled = true; $('testNote').textContent = 'running…'; $('testOut').innerHTML = '';
-  const body = { case: $('testCase').value, agent: $('testAgent').value, prompt: $('testPrompt').value || null };
-  const res = await fetch('/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-  $('testRun').disabled = false; $('testNote').textContent = '';
-  if (!res.ok) { $('testOut').innerHTML = `<div class="bad">${esc((await res.json()).detail || res.statusText)}</div>`; return; }
-  const { record, verdict } = await res.json();
-  $('testOut').innerHTML = `<div><span class="score mono ${cls(verdict.score)}">${f2(verdict.score)}</span> <span class="muted" style="margin-left:8px">${esc(record.agent)} · <span class="mono">${esc(record.model)}</span> · ${record.reply.split(/\s+/).length} words · ${record.latency_s}s</span></div>
-     <pre style="margin-top:10px">${esc(record.reply)}</pre>
-     <div class="t" style="margin-top:10px; font-size:13px; line-height:1.55">${esc(verdict.reason)}</div>`;
+  try {
+    const body = { case: $('testCase').value, agent: $('testAgent').value, prompt: $('testPrompt').value || null };
+    const res = await fetch('/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); $('testOut').innerHTML = `<div class="bad">${esc(typeof b.detail === 'string' ? b.detail : `server said ${res.status}`)}</div>`; return; }
+    const { record, verdict } = await res.json();
+    $('testOut').innerHTML = `<div><span class="score mono ${cls(verdict.score)}">${f2(verdict.score)}</span> <span class="muted" style="margin-left:8px">${esc(record.agent)} · <span class="mono">${esc(record.model)}</span> · ${record.reply.split(/\s+/).length} words · ${record.latency_s}s</span></div>
+       <pre style="margin-top:10px">${esc(record.reply)}</pre>
+       <div class="t" style="margin-top:10px; font-size:13px; line-height:1.55">${esc(verdict.reason)}</div>`;
+  } catch (e) {
+    $('testOut').innerHTML = '<div class="bad">could not reach the server</div>';
+  } finally {
+    $('testRun').disabled = false; $('testNote').textContent = '';
+  }
 };
 
+window.addEventListener('resize', () => { const run = viewed(); if (run && run.rounds.length) drawChart(run, sortedRounds(run)); });
 boot();
 </script>
 </body>

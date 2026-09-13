@@ -142,7 +142,10 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
             if reason:
                 break
     except Exception as exc:
-        yield Event(type="error", round=len(run.rounds) + 1, message=f"{type(exc).__name__}: {exc}")
+        # Persist the failure so the run file is never silently half-written.
+        run.stop_reason = f"error in round {len(run.rounds) + 1}: {type(exc).__name__}: {exc}"
+        save_run(run, config.runs_dir)
+        yield Event(type="error", round=len(run.rounds) + 1, message=run.stop_reason, run=run)
         raise
 
     yield Event(type="run_finished", message=run.stop_reason, run=run)
