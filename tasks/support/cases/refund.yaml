@@ -1,0 +1,26 @@
+id: refund
+input: |
+  Customer message:
+  Hi, I'm Dana. I ordered a 1 kg bag of the Ethiopia Guji on the 3rd of last month (order #48213)
+  and it arrived on the 6th. I only opened it this week, 38 days after delivery, and the beans
+  are stale and taste like cardboard - I think the bag seal was broken. I'd like a refund please.
+
+  Policy snippet:
+  Refunds & returns. Unopened coffee may be returned for a full refund within 30 days of
+  delivery; after 30 days no refund is available. Opened coffee is not eligible for a change-of-
+  mind refund at any time. Defective or damaged items (including compromised packaging or
+  stale product) are covered by our freshness guarantee for 60 days from delivery: we replace
+  the item or refund it, at the customer's choice, once the customer sends a photo of the bag
+  and its roast-date label to support@beanhouse.example.
+
+expected: |
+  Must say:
+  - Dana is covered by the 60-day freshness guarantee because the beans arrived stale / the seal was broken.
+  - She can choose either a replacement or a refund.
+  - Next step: send a photo of the bag and its roast-date label to support@beanhouse.example.
+  Must not:
+  - Refuse the refund because the 30-day window has passed (the defect exception applies).
+  - Approve the refund unconditionally without asking for the photo.
+  - Invent extra compensation (discount codes, free shipping, store credit).
+  Must answer:
+  - Whether she can get a refund.

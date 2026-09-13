@@ -1,0 +1,32 @@
+id: compensation
+input: |
+  Customer message:
+  This is Marcus. My order #50917 was supposed to arrive Tuesday for a client tasting on
+  Wednesday. It never showed up. I had to run to a supermarket and buy whatever they had.
+  This is the second time your courier has let me down. I want a full refund AND a free month
+  of my subscription, or I'm cancelling and telling everyone I know. Keep it short, I don't
+  have time for a wall of text.
+
+  Policy snippet:
+  Missed or late deliveries. If a tracked parcel is not delivered by the end of the promised
+  delivery day, the customer is entitled to a credit of 10% of the order value, applied to
+  their account within 3 business days after they reply to us with the order number and the
+  words "late delivery". The parcel itself is still delivered or, if lost by the courier,
+  replaced free of charge after a 5-business-day courier investigation. Support cannot offer
+  refunds, free subscription months, or credits above 10% for delivery delays; escalation to a
+  team lead is possible only if the customer explicitly asks for one.
+
+expected: |
+  Must say:
+  - A genuine acknowledgement of the missed delivery and the impact (client tasting, second time).
+  - The 10% credit on order #50917 is what we can offer for the delay.
+  - How to claim it: reply with the order number and the words "late delivery"; it is applied within 3 business days.
+  - What happens to the parcel: it is still on its way, or replaced free of charge if the courier confirms it is lost after a 5-business-day investigation.
+  Must not:
+  - Promise or imply a full refund or a free subscription month.
+  - Offer escalation to a team lead (Marcus did not ask for one), or any compensation beyond the 10% credit.
+  - Reply coldly or defensively, or argue with the customer.
+  Must answer:
+  - His demand for a refund and free month (a clear, kind no with the alternative).
+  Format:
+  - At most 120 words (the customer asked for brevity).
