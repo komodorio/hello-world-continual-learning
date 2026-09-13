@@ -32,8 +32,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/itielshwartz/prompt-coach"
-Issues = "https://github.com/itielshwartz/prompt-coach/issues"
+Homepage = "https://github.com/komodorio/prompt-coach"
+Issues = "https://github.com/komodorio/prompt-coach/issues"
 
 [project.scripts]
 prompt-coach = "prompt_coach.cli:app"

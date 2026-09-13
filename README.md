@@ -7,6 +7,24 @@ weak model is within a hair of the strong one.
 
 ![prompt-coach UI: a five-round run in which the student went 0.69 → 0.84](docs/ui.png)
 
+<table>
+  <tr>
+    <td width="50%"><img src="docs/ui-detail.png" alt="Click any score: the trap, the checklist, the judge's reason, the student's reply and the teacher's reply"></td>
+    <td width="50%"><img src="docs/cli.png" alt="The same run in the terminal: score table, per-round progress bars, stop reason"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Click any score: the trap, the checklist a good reply must satisfy, the judge's reason, the reply, and the teacher's reply to the same ticket</sub></td>
+    <td align="center"><sub>Everything is also in the terminal: <code>prompt-coach run</code> prints the table, the progress bars and the stop reason</sub></td>
+  </tr>
+</table>
+
+```
+uv sync && cp .env.example .env      # add ANTHROPIC_API_KEY
+uv run prompt-coach cases            # the 4 tickets, their traps, what a good reply must contain
+uv run prompt-coach run              # watch prompt v1 → v2 → … converge in the terminal
+uv run prompt-coach serve            # same loop in the browser, http://127.0.0.1:8000
+```
+
 ## The story
 
 Most of what people call "continual learning" for agents is not gradient descent. It is a loop that
@@ -157,7 +175,7 @@ You need Python 3.11+, [uv](https://docs.astral.sh/uv/), and an Anthropic API ke
 LiteLLM understands, if you swap the models).
 
 ```bash
-git clone https://github.com/itielshwartz/prompt-coach && cd prompt-coach
+git clone https://github.com/komodorio/prompt-coach && cd prompt-coach
 uv sync
 cp .env.example .env            # put ANTHROPIC_API_KEY=... in it
 # config.yaml is committed and already points at Sonnet (teacher, judge, coach) and Haiku (student)
