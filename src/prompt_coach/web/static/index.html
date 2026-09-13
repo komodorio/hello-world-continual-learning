@@ -485,6 +485,7 @@ function handle(type, ev) {
       if (!sameRun) { $('log').innerHTML = ''; viewedId = live.id; resetSelection(); }   // a replay of the same run keeps the current view
       else if (followingLive()) closeSheet();
       logText(`run ${live.id} · cases ${live.case_ids.join(', ')} · stop when student ≥ teacher average − ${live.gap}, max ${live.max_rounds} rounds`);
+      loadRuns();
       break;
     }
     case 'round_started':
@@ -499,6 +500,7 @@ function handle(type, ev) {
       live.rounds = live.rounds.filter(r => r.round !== ev.result.round).concat([ev.result]);
       delete livePending[ev.round];
       logHtml(`round ${ev.round} done · teacher <b class="t">${f2(ev.result.teacher.mean)}</b> · student <b class="s">${f2(ev.result.student.mean)}</b>`);
+      loadRuns();
       break;
     case 'prompt_proposed':
       logText(`coach → student prompt v${ev.prompt.version}: ${ev.prompt.changelog}`);
@@ -553,7 +555,7 @@ function renderLoop(run) {
   const running = followingLive() && isRunning();
   const m = run ? run.models : (meta ? meta.models : {});
   const n = run ? run.case_ids.length : 0;
-  const state = (working) => `<span class="state ${working ? 'good' : 'muted'}">${working ? 'working' : (run ? 'done' : 'idle')}</span>`;
+  const state = (working) => `<span class="state ${working ? 'good' : 'muted'}">${working ? 'working' : running ? 'waiting' : (run ? 'done' : 'idle')}</span>`;
   const gradedNow = cur ? cur.graded : [];
   const gradedCount = allGraded(run).length + gradedNow.length;
   const vs = versions(run);

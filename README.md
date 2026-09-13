@@ -363,7 +363,8 @@ loop is exercised, including persistence, replay, the SSE stream and the coach's
 second:
 
 ```bash
-uv run pytest
+uv run pytest            # tests, offline
+uv run ruff check src tests && uv run ruff format --check src tests   # what CI runs first
 ```
 
 Exactly one test calls real models on one case. It is marked `live`, deselected by default, and skips
