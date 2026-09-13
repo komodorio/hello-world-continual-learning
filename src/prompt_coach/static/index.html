@@ -5,167 +5,315 @@
 <title>prompt-coach</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root { --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --fg:#e6e8ee; --muted:#8b93a7; --teacher:#5cc8a1; --student:#f2b84b; --bad:#ef6b6b; --ok:#5cc8a1; --mid:#f2b84b; --accent:#7aa2f7; }
+  :root {
+    --canvas:#08090a; --surface:#141516; --surface2:#1c1c1f; --line:#23252a; --line2:#34343a;
+    --text:#f7f8f8; --text2:#d0d6e0; --muted:#8a8f98; --fog:#e4e5e9;
+    --student:#f5a524; --student-dim:rgba(245,165,36,.14);
+    --good:#4cc38a; --bad:#ef6b6b;
+    --sans: Inter, "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Berkeley Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font:14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--fg); }
-  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:18px; align-items:baseline; flex-wrap:wrap; }
-  header h1 { margin:0; font-size:18px; }
-  header .models { color:var(--muted); font-size:12px; }
-  header .models b { color:var(--fg); font-weight:500; }
-  main { display:grid; grid-template-columns: 300px 1fr 1fr; gap:14px; padding:14px 20px; }
-  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; min-width:0; }
-  section h2 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
-  .col { display:flex; flex-direction:column; gap:14px; min-width:0; }
-  label.case { display:flex; gap:8px; align-items:flex-start; padding:6px 0; border-bottom:1px dashed var(--line); cursor:pointer; }
-  label.case:last-of-type { border-bottom:0; }
-  label.case small { color:var(--muted); display:block; }
-  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-  input[type=number], select, textarea, input[type=text] { background:#0f1218; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
-  input[type=number] { width:70px; }
-  textarea { width:100%; min-height:150px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; resize:vertical; }
-  button { background:var(--accent); color:#0b0e14; border:0; border-radius:6px; padding:7px 12px; font:inherit; font-weight:600; cursor:pointer; }
-  button.secondary { background:transparent; color:var(--fg); border:1px solid var(--line); }
-  button:disabled { opacity:.5; cursor:default; }
-  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
-  th, td { padding:5px 8px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
-  th:first-child, td:first-child { text-align:left; }
-  th { color:var(--muted); font-weight:500; font-size:12px; }
-  tfoot td { font-weight:600; border-top:2px solid var(--line); }
-  .t { color:var(--teacher); } .s { color:var(--student); }
-  .good { color:var(--ok); } .mid { color:var(--mid); } .bad { color:var(--bad); }
+  html, body { height:100%; }
+  body { margin:0; background:var(--canvas); color:var(--text); font:14px/1.5 var(--sans); letter-spacing:-0.01em; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; }
+  button { font:inherit; letter-spacing:inherit; cursor:pointer; }
+  h1,h2,h3 { margin:0; font-weight:500; }
+  .mono { font-family:var(--mono); font-variant-numeric:tabular-nums; letter-spacing:-0.014em; }
   .muted { color:var(--muted); }
-  svg.trend { width:100%; height:110px; display:block; margin-top:10px; }
-  .versions { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
-  .versions button { padding:4px 9px; font-size:12px; }
-  .versions button.active { outline:2px solid var(--accent); }
-  pre { margin:0; white-space:pre-wrap; word-break:break-word; font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; background:#0f1218; border:1px solid var(--line); border-radius:6px; padding:10px; max-height:380px; overflow:auto; }
-  pre .add { color:var(--ok); } pre .del { color:var(--bad); text-decoration:line-through; opacity:.8; }
-  .changelog { font-size:12px; color:var(--muted); margin:6px 0 8px; }
-  #log { max-height:300px; overflow:auto; font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  #log div { border-bottom:1px dashed var(--line); padding:3px 0; }
-  #log .ts { color:var(--muted); margin-right:8px; }
-  .status { font-size:12px; color:var(--muted); }
-  .status.live { color:var(--ok); }
-  .verdict { margin-top:10px; }
-  .score { font-size:22px; font-weight:700; }
-  ul.runs { list-style:none; margin:0; padding:0; font-size:12px; }
-  ul.runs li { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed var(--line); }
-  ul.runs button { padding:2px 8px; font-size:11px; }
-  @media (max-width:1100px) { main { grid-template-columns: 1fr; } }
+  .t { color:var(--text2); } .s { color:var(--student); }
+  .good { color:var(--good); } .bad { color:var(--bad); } .mid { color:var(--text2); }
+
+  /* frame */
+  .app { display:grid; grid-template-columns:272px 1fr; grid-template-rows:52px 1fr; height:100vh; }
+  header { grid-column:1/-1; display:flex; align-items:center; gap:14px; padding:0 18px; border-bottom:1px solid var(--line); background:var(--canvas); }
+  header .brand { font-weight:500; font-size:15px; display:flex; align-items:center; gap:9px; }
+  header .brand i { width:10px; height:10px; border-radius:50%; background:var(--student); box-shadow:0 0 0 3px var(--student-dim); display:inline-block; }
+  header .tagline { color:var(--muted); font-size:13px; }
+  header .spacer { flex:1; }
+  .pill { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 11px; border-radius:9999px; border:1px solid var(--line2); background:transparent; color:var(--text2); font-size:12.5px; white-space:nowrap; }
+  .pill.live { border-color:rgba(76,195,138,.5); color:var(--good); }
+  .pill.live::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--good); animation:blink 1.2s infinite; }
+  .pill.err { border-color:rgba(239,107,107,.5); color:var(--bad); }
+  @keyframes blink { 50% { opacity:.25; } }
+  @media (prefers-reduced-motion: reduce) { .pill.live::before { animation:none; } }
+
+  aside { border-right:1px solid var(--line); overflow:auto; display:flex; flex-direction:column; }
+  main { overflow:auto; padding:22px 26px 60px; display:flex; flex-direction:column; gap:22px; }
+
+  /* sidebar */
+  .side-section { padding:16px 16px 14px; border-bottom:1px solid var(--line); }
+  .side-section h2 { font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .run-item { display:block; width:100%; text-align:left; background:transparent; border:1px solid transparent; border-radius:8px; padding:8px 10px; color:var(--text2); }
+  .run-item:hover { background:var(--surface); }
+  .run-item.active { background:var(--surface); border-color:var(--line2); color:var(--text); }
+  .run-item .id { font-size:12.5px; }
+  .run-item .row { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:3px; font-size:12px; color:var(--muted); }
+  .run-item svg { width:64px; height:16px; flex:none; }
+  .case { display:flex; gap:9px; padding:7px 0; border-bottom:1px dashed var(--line); cursor:pointer; align-items:flex-start; }
+  .case:last-of-type { border-bottom:0; }
+  .case input { margin-top:3px; accent-color:var(--fog); }
+  .case b { font-weight:500; font-size:13px; display:block; }
+  .case small { color:var(--muted); display:block; line-height:1.35; margin-top:1px; }
+  .controls { display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  .controls label { font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  input[type=number], select, textarea, input[type=text] { background:var(--canvas); color:var(--text); border:1px solid var(--line2); border-radius:6px; padding:5px 8px; font:inherit; letter-spacing:inherit; }
+  input[type=number] { width:64px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline:none; box-shadow:0 0 0 1px #3e3e44, 0 0 0 3px rgba(228,229,233,.12); }
+  .btn { height:30px; padding:0 14px; border-radius:9999px; border:1px solid var(--line2); background:transparent; color:var(--text); }
+  .btn:hover { background:var(--surface); }
+  .btn.primary { background:var(--fog); color:#0b0e14; border-color:var(--fog); font-weight:500; }
+  .btn.primary:hover { background:#fff; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .btn.sm { height:24px; padding:0 10px; font-size:12px; }
+  .note { font-size:12px; color:var(--muted); margin-top:8px; min-height:16px; }
+
+  /* panels */
+  .panel { background:transparent; border:1px solid var(--line); border-radius:8px; }
+  .panel > .ph { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:12px 16px 0; }
+  .panel > .ph h2 { font-size:15px; }
+  .panel > .ph .sub { color:var(--muted); font-size:12.5px; }
+  .panel > .pb { padding:12px 16px 16px; }
+
+  /* loop strip */
+  .loop { display:grid; grid-template-columns:1fr 24px 1fr 24px 1fr 24px 1fr; gap:0; align-items:stretch; }
+  .agent { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px 14px; min-width:0; }
+  .agent.student { border-color:rgba(245,165,36,.35); }
+  .agent .role { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); display:flex; justify-content:space-between; }
+  .agent .role .state { text-transform:none; letter-spacing:0; }
+  .agent .model { font-size:12.5px; color:var(--text2); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .agent .big { font-size:26px; line-height:1.1; margin-top:10px; font-weight:500; }
+  .agent .big small { font-size:12px; color:var(--muted); font-weight:400; margin-left:6px; }
+  .agent .what { color:var(--muted); font-size:12.5px; margin-top:8px; line-height:1.4; }
+  .arrow { display:flex; align-items:center; justify-content:center; color:var(--line2); font-size:18px; }
+  .arrow.back { position:relative; }
+  .storyline { color:var(--muted); font-size:12.5px; margin-top:10px; line-height:1.5; }
+  .storyline b { color:var(--text2); font-weight:500; }
+
+  /* progress */
+  .two { display:grid; grid-template-columns:1.35fr 1fr; gap:22px; }
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+  .kpi { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .kpi .l { font-size:12px; color:var(--muted); }
+  .kpi .v { font-size:20px; font-weight:500; margin-top:2px; }
+  .kpi .v small { font-size:12px; color:var(--muted); font-weight:400; }
+  svg.chart { width:100%; height:190px; display:block; }
+  .legend { display:flex; gap:16px; font-size:12px; color:var(--muted); margin-top:6px; }
+  .legend i { display:inline-block; width:14px; height:2px; vertical-align:middle; margin-right:6px; }
+
+  /* grid */
+  table { border-collapse:collapse; width:100%; }
+  th, td { padding:7px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:400; font-size:12px; }
+  thead tr:first-child th { border-bottom:0; padding-bottom:2px; }
+  tfoot td { font-weight:500; border-top:1px solid var(--line2); border-bottom:0; }
+  td.score { cursor:pointer; }
+  td.score:hover { background:var(--surface); }
+  td.score.sel { background:var(--surface2); box-shadow:inset 0 0 0 1px var(--line2); }
+  .delta { font-size:11px; margin-left:4px; }
+
+  /* versions */
+  .vtabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .vtab { height:26px; padding:0 11px; border-radius:9999px; border:1px solid var(--line2); background:transparent; color:var(--text2); font-size:12.5px; display:inline-flex; align-items:center; gap:7px; }
+  .vtab.active { background:var(--surface); color:var(--text); border-color:#3e3e44; }
+  .vtab .m { color:var(--muted); }
+  .changelog { color:var(--text2); font-size:13px; margin:12px 0 10px; }
+  .changelog .muted { display:block; font-size:12px; margin-top:2px; }
+  pre { margin:0; white-space:pre-wrap; word-break:break-word; font:12.5px/1.5 var(--mono); letter-spacing:-0.014em; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px 14px; max-height:420px; overflow:auto; color:var(--text2); }
+  pre .add { color:var(--good); } pre .del { color:var(--bad); opacity:.75; text-decoration:line-through; }
+  .toggle { display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--muted); margin-top:10px; }
+
+  /* log */
+  #log { max-height:260px; overflow:auto; font:12px/1.55 var(--mono); letter-spacing:-0.014em; color:var(--text2); }
+  #log div { padding:3px 0; border-bottom:1px dashed var(--line); }
+  #log .ts { color:var(--muted); margin-right:10px; }
+  .empty { color:var(--muted); font-size:13px; padding:8px 0; }
+
+  /* detail sheet */
+  .sheet { position:fixed; top:52px; right:0; bottom:0; width:520px; max-width:92vw; background:var(--surface); border-left:1px solid var(--line2); transform:translateX(100%); transition:transform .18s ease; overflow:auto; padding:18px 20px 30px; z-index:5; }
+  .sheet.open { transform:none; }
+  @media (prefers-reduced-motion: reduce) { .sheet { transition:none; } }
+  .sheet .head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .sheet h3 { font-size:15px; }
+  .sheet .meta { color:var(--muted); font-size:12.5px; margin-top:3px; }
+  .sheet .score { font-size:34px; font-weight:500; line-height:1; margin:14px 0 4px; }
+  .sheet h4 { margin:18px 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:500; }
+  .sheet pre { max-height:none; }
+  .sheet .reason { color:var(--text2); font-size:13.5px; line-height:1.55; }
+  .x { background:transparent; border:1px solid var(--line2); color:var(--text2); border-radius:9999px; width:28px; height:28px; }
+
+  /* test panel */
+  .test { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .test textarea { width:100%; min-height:130px; font:12.5px/1.45 var(--mono); resize:vertical; }
+  .test .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .test .out .score { font-size:28px; font-weight:500; }
+
+  details summary { cursor:pointer; color:var(--muted); font-size:13px; list-style:none; }
+  details summary::-webkit-details-marker { display:none; }
+  details summary::before { content:"▸ "; }
+  details[open] summary::before { content:"▾ "; }
+
+  @media (max-width:1100px) { .app { grid-template-columns:1fr; grid-template-rows:52px auto 1fr; } aside { border-right:0; border-bottom:1px solid var(--line); max-height:40vh; } .two { grid-template-columns:1fr; } .loop { grid-template-columns:1fr 1fr; } .arrow { display:none; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>prompt-coach</h1>
-  <div class="models" id="models">loading…</div>
-  <div class="status" id="status">idle</div>
-</header>
-<main>
-  <div class="col">
-    <section>
-      <h2>Cases</h2>
+<div class="app">
+  <header>
+    <div class="brand"><i></i>prompt-coach</div>
+    <div class="tagline">a coach rewrites a weak agent's prompt until it catches up with a strong one</div>
+    <div class="spacer"></div>
+    <span class="pill" id="status">idle</span>
+  </header>
+
+  <aside>
+    <div class="side-section">
+      <h2>Runs <button class="btn sm" id="refreshRuns" title="refresh">↻</button></h2>
+      <div id="runs"><div class="empty">no runs yet</div></div>
+    </div>
+    <div class="side-section">
+      <h2>New run</h2>
       <div id="cases"></div>
-      <div class="row">
+      <div class="controls">
         <label>rounds <input type="number" id="rounds" min="1" max="10" value="5"></label>
         <label>gap <input type="number" id="gap" min="0" max="1" step="0.05" value="0.1"></label>
       </div>
-      <div class="row">
-        <button id="start">Start run</button>
-        <span class="muted" id="startNote"></span>
+      <div class="controls">
+        <button class="btn primary" id="start">Start run</button>
       </div>
-    </section>
-    <section>
-      <h2>Saved runs</h2>
-      <ul class="runs" id="runs"></ul>
-    </section>
-    <section>
-      <h2>Test one case</h2>
-      <div class="row">
-        <select id="testCase"></select>
-        <select id="testAgent"><option value="student">student</option><option value="teacher">teacher</option></select>
-      </div>
-      <div class="row"><textarea id="testPrompt" placeholder="prompt (empty = task prompt v1)"></textarea></div>
-      <div class="row">
-        <button id="testRun">Run &amp; grade</button>
-        <button class="secondary" id="useLatest">Use latest prompt</button>
-      </div>
-      <div id="testOut"></div>
-    </section>
-  </div>
+      <div class="note" id="startNote"></div>
+    </div>
+    <div class="side-section" style="border-bottom:0">
+      <h2>Models</h2>
+      <div id="models" class="muted" style="font-size:12.5px; line-height:1.7"></div>
+    </div>
+  </aside>
 
-  <div class="col">
-    <section>
-      <h2>Scores <span class="muted" id="runTitle"></span></h2>
-      <div id="grid" class="muted">No run yet. Pick cases and start one, or open a saved run.</div>
-      <svg class="trend" id="trend" viewBox="0 0 400 110" preserveAspectRatio="none"></svg>
-    </section>
-    <section>
-      <h2>Live log</h2>
-      <div id="log"></div>
-    </section>
-  </div>
-
-  <div class="col">
-    <section>
-      <h2>Student prompt versions</h2>
-      <div class="versions" id="versions"></div>
-      <div class="changelog" id="changelog"></div>
-      <pre id="promptView">–</pre>
-      <div class="row">
-        <label><input type="checkbox" id="showDiff" checked> show diff against previous version</label>
+  <main>
+    <section class="panel">
+      <div class="ph"><h2>The loop</h2><span class="sub" id="loopSub">four roles, one lever: the student's prompt</span></div>
+      <div class="pb">
+        <div class="loop" id="loop"></div>
+        <div class="storyline" id="story"></div>
       </div>
     </section>
-    <section>
-      <h2>Evaluator's recommendation</h2>
-      <pre id="recommendation">–</pre>
+
+    <div class="two">
+      <section class="panel">
+        <div class="ph"><h2>Improvement over time</h2><span class="sub" id="runTitle"></span></div>
+        <div class="pb">
+          <div class="kpis" id="kpis"></div>
+          <svg class="chart" id="chart" viewBox="0 0 640 190" preserveAspectRatio="none"></svg>
+          <div class="legend"><span><i style="background:var(--text2)"></i>teacher mean</span><span><i style="background:var(--student)"></i>student mean</span><span><i style="background:var(--line2); height:0; border-top:2px dashed var(--line2)"></i>teacher − gap (stop line)</span></div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="ph"><h2>Scores by case</h2><span class="sub">click a score to read the reply and the judge's reason</span></div>
+        <div class="pb" id="grid"><div class="empty">Pick cases and start a run, or open a saved one.</div></div>
+      </section>
+    </div>
+
+    <div class="two">
+      <section class="panel">
+        <div class="ph"><h2>Student prompt over versions</h2><span class="sub">what the coach changed, and why</span></div>
+        <div class="pb">
+          <div class="vtabs" id="versions"></div>
+          <div class="changelog" id="changelog"></div>
+          <pre id="promptView">–</pre>
+          <label class="toggle"><input type="checkbox" id="showDiff" checked> show as diff against the previous version</label>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="ph"><h2>Evaluator's brief to the coach</h2><span class="sub" id="recSub"></span></div>
+        <div class="pb"><div id="recommendation" class="t" style="font-size:13.5px; line-height:1.6"><span class="empty">–</span></div></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="ph"><h2>Try one case</h2><span class="sub">one agent, one ticket, one verdict — no loop, no coach</span></div>
+      <div class="pb test">
+        <div>
+          <div class="row">
+            <select id="testCase"></select>
+            <select id="testAgent"><option value="student">student</option><option value="teacher">teacher</option></select>
+            <button class="btn sm" id="useLatest">paste latest coached prompt</button>
+          </div>
+          <textarea id="testPrompt" placeholder="prompt (leave empty for the task's v1 prompt)" style="margin-top:10px"></textarea>
+          <div class="row" style="margin-top:10px"><button class="btn primary" id="testRun">Run &amp; grade</button><span class="note" id="testNote"></span></div>
+        </div>
+        <div class="out" id="testOut"><div class="empty">The reply and the judge's verdict appear here.</div></div>
+      </div>
     </section>
-  </div>
-</main>
+
+    <section class="panel">
+      <div class="pb" style="padding-top:12px">
+        <details><summary>Live log</summary><div id="log" style="margin-top:10px"></div></details>
+      </div>
+    </section>
+  </main>
+</div>
+
+<aside class="sheet" id="sheet" aria-live="polite">
+  <div class="head"><div><h3 id="shTitle"></h3><div class="meta" id="shMeta"></div></div><button class="x" id="shClose" aria-label="close">×</button></div>
+  <div class="score" id="shScore"></div>
+  <div class="reason" id="shReason"></div>
+  <h4>Reply</h4><pre id="shReply"></pre>
+  <h4>What the agent saw</h4><pre id="shInput"></pre>
+  <h4>What the judge checked against</h4><pre id="shExpected"></pre>
+</aside>
 
 <script>
 // ---------- state ----------
-// `run` mirrors the server's RunRecord: {id, case_ids, rounds:[RoundResult], stop_reason, ...}.
-// Live events update it; saved runs replace it. Everything renders from this one object.
-let meta = null;              // GET /cases
-let run = null;               // current run (live or loaded)
-let pending = {};             // round -> graded[] for the round in progress
-let selectedVersion = null;
-let es = null;
+// `run` mirrors the server's RunRecord. Live events update it; saved runs replace it.
+let meta = null, run = null, pending = {}, selectedVersion = null, es = null, selectedCell = null;
+let liveRounds = new Set();
 
 const $ = (id) => document.getElementById(id);
-const cls = (x) => x >= 0.8 ? 'good' : x >= 0.6 ? 'mid' : 'bad';
-const f2 = (x) => x.toFixed(2);
-const esc = (s) => s.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const f2 = (x) => (x === undefined || x === null) ? '–' : x.toFixed(2);
+const cls = (x) => x >= 0.8 ? 'good' : x < 0.6 ? 'bad' : 'mid';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sortedRounds = () => run ? [...run.rounds].sort((a, b) => a.round - b.round) : [];
+const mean = (o) => { const v = Object.values(o); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined; };
 
 // ---------- boot ----------
 async function boot() {
   meta = await (await fetch('/cases')).json();
-  $('models').innerHTML = `teacher <b class="t">${esc(meta.models.teacher)}</b> · student <b class="s">${esc(meta.models.student)}</b> · evaluator/coach <b>${esc(meta.models.evaluator)}</b>`;
-  $('rounds').value = meta.loop.max_rounds;
-  $('gap').value = meta.loop.gap;
-  $('cases').innerHTML = meta.cases.map(c => `
-    <label class="case"><input type="checkbox" value="${esc(c.id)}" checked>
-      <span><b>${esc(c.id)}</b><small>${esc(c.input.split('\n').slice(1, 3).join(' ').slice(0, 110))}…</small></span></label>`).join('');
+  $('models').innerHTML = `teacher <span class="t mono">${esc(meta.models.teacher)}</span><br>student <span class="s mono">${esc(meta.models.student)}</span><br>evaluator <span class="mono">${esc(meta.models.evaluator)}</span><br>coach <span class="mono">${esc(meta.models.coach)}</span>`;
+  $('rounds').value = meta.loop.max_rounds; $('gap').value = meta.loop.gap;
+  $('cases').innerHTML = meta.cases.map(c => `<label class="case"><input type="checkbox" value="${esc(c.id)}" checked><span><b>${esc(c.id)}</b><small>${esc(firstLine(c.input))}</small></span></label>`).join('');
   $('testCase').innerHTML = meta.cases.map(c => `<option>${esc(c.id)}</option>`).join('');
   await loadRuns();
-  connect();   // attach to any run already in progress (or replay its buffered events)
+  renderAll();
+  connect();
 }
+function firstLine(input) { const l = input.split('\n').map(s => s.trim()).filter(s => s && !s.endsWith(':')); return (l[0] || '').slice(0, 96) + '…'; }
 
 async function loadRuns() {
   const runs = await (await fetch('/runs')).json();
-  $('runs').innerHTML = runs.length ? runs.map(r => `
-    <li><span>${esc(r.id)} <span class="muted">· ${r.rounds} rounds · ${r.student_means.map(f2).join(' → ')}</span></span>
-        <button class="secondary" data-id="${esc(r.id)}">open</button></li>`).join('') : '<li class="muted">none yet</li>';
+  window._runs = runs;
+  if (!runs.length) { $('runs').innerHTML = '<div class="empty">no runs yet</div>'; return; }
+  $('runs').innerHTML = runs.map(r => `
+    <button class="run-item${run && run.id === r.id ? ' active' : ''}" data-id="${esc(r.id)}">
+      <div class="id mono">${esc(r.id)}</div>
+      <div class="row"><span>${r.rounds} round${r.rounds === 1 ? '' : 's'} · <span class="s mono">${r.student_means.map(f2).join(' → ')}</span></span>${spark(r.teacher_means, r.student_means)}</div>
+    </button>`).join('');
   $('runs').querySelectorAll('button').forEach(b => b.onclick = () => openRun(b.dataset.id));
 }
+function spark(t, s) {
+  if (!s.length) return '';
+  const W = 64, H = 16, x = (i) => s.length === 1 ? W / 2 : i * W / (s.length - 1), y = (v) => H - 2 - v * (H - 4);
+  const pts = (arr) => arr.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}"><polyline fill="none" stroke="#d0d6e0" stroke-opacity=".5" stroke-width="1" points="${pts(t)}"/><polyline fill="none" stroke="#f5a524" stroke-width="1.5" points="${pts(s)}"/></svg>`;
+}
+$('refreshRuns').onclick = loadRuns;
 
 async function openRun(id) {
   const res = await fetch(`/runs/${encodeURIComponent(id)}`);
   if (!res.ok) { logLine(`could not load run ${id}`); return; }
-  run = await res.json(); pending = {}; selectedVersion = null;
-  setStatus(`replaying ${id}`, false);
+  run = await res.json(); pending = {}; liveRounds = new Set(); selectedVersion = null; selectedCell = null;
+  setStatus(`viewing ${id}`, '');
   logLine(`opened saved run ${id} · ${run.stop_reason || 'in progress'}`);
-  renderAll();
+  renderAll(); loadRuns();
 }
 
 // ---------- start / events ----------
@@ -173,40 +321,38 @@ $('start').onclick = async () => {
   const cases = [...$('cases').querySelectorAll('input:checked')].map(i => i.value);
   if (!cases.length) { $('startNote').textContent = 'pick at least one case'; return; }
   $('start').disabled = true; $('startNote').textContent = '';
-  const res = await fetch('/start', { method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ cases, rounds: +$('rounds').value, gap: +$('gap').value }) });
+  const res = await fetch('/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ cases, rounds: +$('rounds').value, gap: +$('gap').value }) });
   if (!res.ok) { $('startNote').textContent = (await res.json()).detail; $('start').disabled = false; return; }
-  run = null; pending = {}; selectedVersion = null; $('log').innerHTML = ''; renderAll();
+  run = null; pending = {}; liveRounds = new Set(); selectedVersion = null; selectedCell = null; $('log').innerHTML = ''; renderAll();
   connect();
 };
 
 function connect() {
   if (es) es.close();
   es = new EventSource('/events');
-  const on = (type) => es.addEventListener(type, (e) => handle(type, JSON.parse(e.data)));
-  ['run_started', 'round_started', 'graded', 'round_finished', 'prompt_proposed', 'run_finished', 'error', 'log'].forEach(on);
-  es.addEventListener('end', () => { es.close(); es = null; $('start').disabled = false; if (run && !run.stop_reason) setStatus('stopped', false); });
-  es.onerror = () => { setStatus('disconnected', false); };
+  ['run_started', 'round_started', 'graded', 'round_finished', 'prompt_proposed', 'run_finished', 'error', 'log'].forEach(t => es.addEventListener(t, (e) => handle(t, JSON.parse(e.data))));
+  es.addEventListener('end', () => { es.close(); es = null; $('start').disabled = false; if (run && !run.stop_reason && liveRounds.size === 0) setStatus('stopped', ''); });
+  es.onerror = () => setStatus('disconnected', 'err');
 }
 
 function handle(type, ev) {
   switch (type) {
     case 'run_started':
-      run = ev.run; pending = {}; selectedVersion = null;
-      setStatus(`running ${run.id}`, true); $('start').disabled = true;
-      logLine(`run ${run.id} started · cases ${run.case_ids.join(', ')} · gap ${run.gap} · max ${run.max_rounds} rounds`);
+      run = ev.run; pending = {}; liveRounds = new Set(); selectedVersion = null; selectedCell = null;
+      setStatus(`running ${run.id}`, 'live'); $('start').disabled = true;
+      logLine(`run ${run.id} · cases ${run.case_ids.join(', ')} · stop when student ≥ teacher − ${run.gap}, max ${run.max_rounds} rounds`);
       break;
     case 'round_started':
-      pending[ev.round] = [];
-      logLine(`round ${ev.round} · student prompt v${ev.prompt.version} · running ${run.case_ids.length}×2 agents…`);
+      pending[ev.round] = []; liveRounds.add(ev.round);
+      logLine(`round ${ev.round} · student prompt v${ev.prompt.version} · running ${run.case_ids.length}×2 agents, then grading…`);
       break;
     case 'graded':
       (pending[ev.round] ||= []).push(ev.graded);
-      logLine(`<span class="${ev.graded.record.agent === 'teacher' ? 't' : 's'}">${ev.graded.record.agent}</span> ${ev.graded.record.case_id} → <b class="${cls(ev.graded.verdict.score)}">${f2(ev.graded.verdict.score)}</b> <span class="muted">${esc(ev.graded.verdict.reason.slice(0, 140))}…</span>`);
+      logLine(`<span class="${ev.graded.record.agent === 'teacher' ? 't' : 's'}">${ev.graded.record.agent}</span> ${ev.graded.record.case_id} → <b class="${cls(ev.graded.verdict.score)}">${f2(ev.graded.verdict.score)}</b> <span class="muted">${esc(ev.graded.verdict.reason.slice(0, 120))}…</span>`);
       break;
     case 'round_finished':
       run.rounds = run.rounds.filter(r => r.round !== ev.result.round).concat([ev.result]);
-      delete pending[ev.round];
+      delete pending[ev.round]; liveRounds.delete(ev.round);
       logLine(`round ${ev.round} done · teacher <b class="t">${f2(ev.result.teacher.mean)}</b> · student <b class="s">${f2(ev.result.student.mean)}</b>`);
       break;
     case 'prompt_proposed':
@@ -214,11 +360,11 @@ function handle(type, ev) {
       selectedVersion = ev.prompt.version;
       break;
     case 'run_finished':
-      run = ev.run; setStatus(`finished · ${run.stop_reason}`, false); $('start').disabled = false;
+      run = ev.run; liveRounds = new Set(); setStatus(`finished · ${run.stop_reason}`, ''); $('start').disabled = false;
       logLine(`<b>finished</b> · ${esc(run.stop_reason)}`); loadRuns();
       break;
     case 'error':
-      logLine(`<b class="bad">error</b> ${esc(ev.message)}`); setStatus('error', false); $('start').disabled = false;
+      logLine(`<b class="bad">error</b> ${esc(ev.message)}`); setStatus('error', 'err'); $('start').disabled = false; liveRounds = new Set();
       break;
     case 'log':
       logLine(esc(ev.message));
@@ -227,86 +373,162 @@ function handle(type, ev) {
 }
 
 // ---------- rendering ----------
-function setStatus(text, live) { const s = $('status'); s.textContent = text; s.className = 'status' + (live ? ' live' : ''); }
-
-function logLine(html) {
-  const d = document.createElement('div');
-  d.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span>${html}`;
-  $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight;
-}
+function setStatus(text, kind) { const s = $('status'); s.textContent = text; s.className = 'pill' + (kind ? ' ' + kind : ''); }
+function logLine(html) { const d = document.createElement('div'); d.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span>${html}`; $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight; }
 
 function versions() {
-  if (!run) return [];
   const list = [];
-  for (const r of [...run.rounds].sort((a, b) => a.round - b.round)) {
+  for (const r of sortedRounds()) {
     if (!list.some(v => v.version === r.student_prompt.version)) list.push(r.student_prompt);
     if (r.next_prompt && !list.some(v => v.version === r.next_prompt.version)) list.push(r.next_prompt);
   }
   return list;
 }
+function allGraded() { const out = []; for (const r of sortedRounds()) for (const g of r.graded) out.push({ round: r.round, g }); return out; }
 
-function renderAll() { renderGrid(); renderTrend(); renderVersions(); renderRecommendation(); }
+function renderAll() { renderLoop(); renderProgress(); renderGrid(); renderVersions(); renderRecommendation(); }
+
+function renderLoop() {
+  const rounds = sortedRounds(), last = rounds[rounds.length - 1];
+  const live = liveRounds.size > 0, liveRound = [...liveRounds][0];
+  const m = run ? run.models : (meta ? meta.models : {});
+  const state = (running) => `<span class="state ${running ? 'good' : 'muted'}">${running ? 'working' : (run ? 'done' : 'idle')}</span>`;
+  const gradedCount = allGraded().length + Object.values(pending).reduce((a, b) => a + b.length, 0);
+  const vs = versions();
+  const teacherAvg = rounds.length ? rounds.reduce((a, r) => a + r.teacher.mean, 0) / rounds.length : undefined;
+  const lat = (agent) => { const xs = allGraded().filter(x => x.g.record.agent === agent).map(x => x.g.record.latency_s); return xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1) + 's avg' : ''; };
+  $('loop').innerHTML = `
+    <div class="agent"><div class="role">teacher ${state(live && (pending[liveRound] || []).filter(g => g.record.agent === 'teacher').length < (run ? run.case_ids.length : 0))}</div>
+      <div class="model mono">${esc(m.teacher || '')}</div>
+      <div class="big t">${f2(last ? last.teacher.mean : undefined)}<small>${rounds.length > 1 ? `avg ${f2(teacherAvg)}` : (last ? 'mean' : '')}</small></div>
+      <div class="what">Strong model. Fixed prompt v1, every round. The bar the student is chasing. ${lat('teacher')}</div></div>
+    <div class="arrow">→</div>
+    <div class="agent student"><div class="role">student ${state(live && (pending[liveRound] || []).filter(g => g.record.agent === 'student').length < (run ? run.case_ids.length : 0))}</div>
+      <div class="model mono">${esc(m.student || '')}</div>
+      <div class="big s">${f2(last ? last.student.mean : undefined)}<small>${last ? `prompt v${last.student_prompt.version}` : ''}</small></div>
+      <div class="what">Weak model, same agent, same cases. Only its prompt changes between rounds. ${lat('student')}</div></div>
+    <div class="arrow">→</div>
+    <div class="agent"><div class="role">evaluator ${state(live && (pending[liveRound] || []).length < (run ? run.case_ids.length * 2 : 0))}</div>
+      <div class="model mono">${esc(m.evaluator || '')}</div>
+      <div class="big">${gradedCount}<small>verdicts</small></div>
+      <div class="what">Judge with the answer key. One score 0–1 and a reason per reply; never told who wrote it.</div></div>
+    <div class="arrow">→</div>
+    <div class="agent"><div class="role">coach ${state(false)}</div>
+      <div class="model mono">${esc(m.coach || '')}</div>
+      <div class="big">${Math.max(0, vs.length - 1)}<small>rewrite${vs.length === 2 ? '' : 's'}</small></div>
+      <div class="what">Reads the student's low scores and the reasons. Never sees the answer key. Rewrites the prompt.</div></div>`;
+  $('story').innerHTML = storyline(rounds);
+}
+function storyline(rounds) {
+  if (!run) return 'Start a run: both agents answer every case with the same prompt, the evaluator scores all replies, and if the student is more than <b>gap</b> behind, the coach writes prompt v2. Repeat.';
+  if (!rounds.length) return `Round 1 is running: <b>${run.case_ids.length} cases × 2 agents</b> then ${run.case_ids.length * 2} verdicts.`;
+  const first = rounds[0], last = rounds[rounds.length - 1];
+  const parts = [`Round 1: teacher <b>${f2(first.teacher.mean)}</b>, student <b>${f2(first.student.mean)}</b>.`];
+  for (let i = 1; i < rounds.length; i++) {
+    const p = rounds[i - 1], r = rounds[i], d = r.student.mean - p.student.mean;
+    parts.push(`Prompt v${r.student_prompt.version} ${d >= 0 ? 'lifted' : 'dropped'} the student to <b>${f2(r.student.mean)}</b> (${d >= 0 ? '+' : ''}${d.toFixed(2)}).`);
+  }
+  if (run.stop_reason) parts.push(`Stopped: <b>${esc(run.stop_reason)}</b>.`);
+  else if (last.next_prompt) parts.push(`Coach proposed v${last.next_prompt.version}; round ${last.round + 1} is next.`);
+  return parts.join(' ');
+}
+
+function renderProgress() {
+  const rounds = sortedRounds();
+  $('runTitle').textContent = run ? run.id : '';
+  if (!rounds.length) { $('kpis').innerHTML = kpi('rounds', '0') + kpi('student start', '–') + kpi('student now', '–') + kpi('gap to teacher', '–'); $('chart').innerHTML = ''; return; }
+  const first = rounds[0], last = rounds[rounds.length - 1];
+  const delta = last.student.mean - first.student.mean, gap = last.teacher.mean - last.student.mean;
+  $('kpis').innerHTML =
+    kpi('rounds', `${rounds.length}<small> / ${run.max_rounds}</small>`) +
+    kpi('student start', `<span class="s">${f2(first.student.mean)}</span><small> v1</small>`) +
+    kpi('student now', `<span class="s">${f2(last.student.mean)}</span><small class="${delta >= 0 ? 'good' : 'bad'}"> ${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</small>`) +
+    kpi('gap to teacher', `<span class="${gap <= run.gap ? 'good' : ''}">${gap.toFixed(2)}</span><small> stop at ≤ ${run.gap}</small>`);
+  drawChart(rounds);
+}
+const kpi = (l, v) => `<div class="kpi"><div class="l">${l}</div><div class="v mono">${v}</div></div>`;
+
+function drawChart(rounds) {
+  const svg = $('chart'), W = 640, H = 190, pl = 36, pr = 16, pt = 18, pb = 26;
+  const n = rounds.length, xs = (i) => n === 1 ? (pl + (W - pl - pr) / 2) : pl + i * (W - pl - pr) / (n - 1);
+  const lo = Math.max(0, Math.min(...rounds.flatMap(r => [r.student.mean, r.teacher.mean - run.gap])) - 0.15), hi = 1.0;
+  const ys = (v) => pt + (hi - v) * (H - pt - pb) / (hi - lo);
+  const grid = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0].filter(v => v >= lo).map(v => `<line x1="${pl}" x2="${W - pr}" y1="${ys(v)}" y2="${ys(v)}" stroke="#23252a"/><text x="${pl - 8}" y="${ys(v) + 3}" fill="#8a8f98" font-size="10" text-anchor="end" font-family="ui-monospace,Menlo,monospace">${v.toFixed(1)}</text>`).join('');
+  const line = (key, color, w) => `<polyline fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" points="${rounds.map((r, i) => `${xs(i)},${ys(r[key].mean)}`).join(' ')}"/>`;
+  const dots = (key, color, dy) => rounds.map((r, i) => `<circle cx="${xs(i)}" cy="${ys(r[key].mean)}" r="3.5" fill="#08090a" stroke="${color}" stroke-width="2"/><text x="${xs(i)}" y="${ys(r[key].mean) + dy}" fill="${color}" font-size="11" text-anchor="middle" font-family="ui-monospace,Menlo,monospace">${f2(r[key].mean)}</text>`).join('');
+  const stop = `<polyline fill="none" stroke="#34343a" stroke-width="1.5" stroke-dasharray="4 4" points="${rounds.map((r, i) => `${xs(i)},${ys(Math.max(lo, r.teacher.mean - run.gap))}`).join(' ')}"/>`;
+  const band = n > 1 ? `<polygon fill="rgba(245,165,36,.06)" points="${rounds.map((r, i) => `${xs(i)},${ys(r.teacher.mean)}`).join(' ')} ${rounds.map((r, i) => `${xs(n - 1 - i)},${ys(rounds[n - 1 - i].student.mean)}`).join(' ')}"/>` : '';
+  const xlab = rounds.map((r, i) => `<text x="${xs(i)}" y="${H - 8}" fill="#8a8f98" font-size="11" text-anchor="middle">round ${r.round} · v${r.student_prompt.version}</text>`).join('');
+  svg.innerHTML = grid + band + stop + line('teacher', '#d0d6e0', 1.5) + line('student', '#f5a524', 2) + dots('teacher', '#d0d6e0', -9) + dots('student', '#f5a524', 16) + xlab;
+}
 
 function renderGrid() {
-  if (!run) { $('grid').className = 'muted'; $('grid').textContent = 'No run yet. Pick cases and start one, or open a saved run.'; $('runTitle').textContent = ''; return; }
-  $('runTitle').textContent = `· ${run.id}`;
-  const rounds = [...run.rounds].sort((a, b) => a.round - b.round);
-  const live = Object.keys(pending).map(Number).filter(n => !rounds.some(r => r.round === n));
-  const cols = [...rounds.map(r => ({ n: r.round, t: r.teacher.scores, s: r.student.scores, v: r.student_prompt.version, done: true })),
-                ...live.map(n => { const t = {}, s = {}; for (const g of pending[n]) (g.record.agent === 'teacher' ? t : s)[g.record.case_id] = g.verdict.score; return { n, t, s, done: false }; })];
-  if (!cols.length) { $('grid').className = 'muted'; $('grid').textContent = 'round 1 running…'; return; }
-  const cell = (x) => x === undefined ? '<td class="muted">…</td>' : `<td class="${cls(x)}">${f2(x)}</td>`;
-  const mean = (o) => { const v = Object.values(o); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : undefined; };
-  let html = '<table><thead><tr><th>case</th>' + cols.map(c => `<th colspan="2">round ${c.n}${c.v ? ` · v${c.v}` : ''}${c.done ? '' : ' <span class="muted">(live)</span>'}</th>`).join('') + '</tr>';
-  html += '<tr><th></th>' + cols.map(() => '<th class="t">teacher</th><th class="s">student</th>').join('') + '</tr></thead><tbody>';
-  for (const id of run.case_ids) html += `<tr><td>${esc(id)}</td>` + cols.map(c => cell(c.t[id]) + cell(c.s[id])).join('') + '</tr>';
-  html += '</tbody><tfoot><tr><td>mean</td>' + cols.map(c => { const mt = mean(c.t), ms = mean(c.s); return cell(mt) + cell(ms); }).join('') + '</tr></tfoot></table>';
-  $('grid').className = ''; $('grid').innerHTML = html;
+  if (!run) { $('grid').innerHTML = '<div class="empty">Pick cases and start a run, or open a saved one.</div>'; return; }
+  const rounds = sortedRounds();
+  const cols = [...rounds.map(r => ({ n: r.round, v: r.student_prompt.version, t: r.teacher.scores, s: r.student.scores, done: true })),
+                ...[...liveRounds].filter(n => !rounds.some(r => r.round === n)).map(n => { const t = {}, s = {}; for (const g of (pending[n] || [])) (g.record.agent === 'teacher' ? t : s)[g.record.case_id] = g.verdict.score; return { n, t, s, done: false }; })];
+  if (!cols.length) { $('grid').innerHTML = '<div class="empty">round 1 running…</div>'; return; }
+  const cell = (c, agent, id) => {
+    const x = c[agent === 'teacher' ? 't' : 's'][id];
+    if (x === undefined) return `<td class="muted">${c.done ? '–' : '…'}</td>`;
+    const sel = selectedCell && selectedCell.round === c.n && selectedCell.agent === agent && selectedCell.case === id;
+    return `<td class="score ${cls(x)}${sel ? ' sel' : ''} mono" data-r="${c.n}" data-a="${agent}" data-c="${esc(id)}" title="open reply and reason">${f2(x)}</td>`;
+  };
+  const deltaTd = (id) => {
+    if (rounds.length < 2) return '';
+    const a = rounds[0].student.scores[id], b = rounds[rounds.length - 1].student.scores[id], d = b - a;
+    return `<td class="mono ${d > 0 ? 'good' : d < 0 ? 'bad' : 'muted'}">${d > 0 ? '+' : ''}${d.toFixed(2)}</td>`;
+  };
+  let html = '<table><thead><tr><th></th>' + cols.map(c => `<th colspan="2">round ${c.n} · v${c.v || '?'}${c.done ? '' : ' <span class="good">live</span>'}</th>`).join('') + (rounds.length > 1 ? '<th>Δ student</th>' : '') + '</tr>';
+  html += '<tr><th>case</th>' + cols.map(() => '<th class="t">teacher</th><th class="s">student</th>').join('') + (rounds.length > 1 ? '<th>v1 → now</th>' : '') + '</tr></thead><tbody>';
+  for (const id of run.case_ids) html += `<tr><td>${esc(id)}</td>` + cols.map(c => cell(c, 'teacher', id) + cell(c, 'student', id)).join('') + deltaTd(id) + '</tr>';
+  html += '</tbody><tfoot><tr><td>mean</td>' + cols.map(c => { const mt = mean(c.t), ms = mean(c.s); return `<td class="mono t">${f2(mt)}</td><td class="mono s">${f2(ms)}</td>`; }).join('') + (rounds.length > 1 ? `<td class="mono">${(() => { const d = rounds[rounds.length - 1].student.mean - rounds[0].student.mean; return `<span class="${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '+' : ''}${d.toFixed(2)}</span>`; })()}</td>` : '') + '</tr></tfoot></table>';
+  $('grid').innerHTML = html;
+  $('grid').querySelectorAll('td.score').forEach(td => td.onclick = () => openCell(+td.dataset.r, td.dataset.a, td.dataset.c));
 }
 
-function renderTrend() {
-  const svg = $('trend'); svg.innerHTML = '';
-  if (!run || !run.rounds.length) return;
-  const rounds = [...run.rounds].sort((a, b) => a.round - b.round);
-  const W = 400, H = 110, px = 28, py = 12;
-  const x = (i) => rounds.length === 1 ? W / 2 : px + i * (W - 2 * px) / (rounds.length - 1);
-  const y = (v) => H - py - v * (H - 2 * py);
-  const line = (key, color) => {
-    const pts = rounds.map((r, i) => `${x(i)},${y(r[key].mean)}`).join(' ');
-    return `<polyline fill="none" stroke="${color}" stroke-width="2" points="${pts}"/>` +
-      rounds.map((r, i) => `<circle cx="${x(i)}" cy="${y(r[key].mean)}" r="3" fill="${color}"/><text x="${x(i)}" y="${y(r[key].mean) - 7}" fill="${color}" font-size="10" text-anchor="middle">${f2(r[key].mean)}</text>`).join('');
-  };
-  const gapBand = rounds.map((r, i) => `${x(i)},${y(Math.max(0, r.teacher.mean - run.gap))}`).join(' ');
-  svg.innerHTML =
-    `<line x1="${px}" y1="${y(0)}" x2="${W - px}" y2="${y(0)}" stroke="#2a2f3a"/><line x1="${px}" y1="${y(1)}" x2="${W - px}" y2="${y(1)}" stroke="#2a2f3a" stroke-dasharray="3 3"/>` +
-    `<polyline fill="none" stroke="#5cc8a1" stroke-opacity=".35" stroke-dasharray="4 3" stroke-width="1" points="${gapBand}"/>` +
-    line('teacher', '#5cc8a1') + line('student', '#f2b84b') +
-    rounds.map((r, i) => `<text x="${x(i)}" y="${H - 1}" fill="#8b93a7" font-size="10" text-anchor="middle">r${r.round}</text>`).join('');
+function openCell(round, agent, caseId) {
+  const r = sortedRounds().find(x => x.round === round);
+  const g = r ? r.graded.find(x => x.record.agent === agent && x.record.case_id === caseId) : (pending[round] || []).find(x => x.record.agent === agent && x.record.case_id === caseId);
+  if (!g) return;
+  selectedCell = { round, agent, case: caseId }; renderGrid();
+  const c = meta.cases.find(x => x.id === caseId) || {};
+  $('shTitle').innerHTML = `${esc(caseId)} · <span class="${agent === 'teacher' ? 't' : 's'}">${agent}</span>`;
+  $('shMeta').innerHTML = `round ${round} · prompt v${g.record.prompt_version} · <span class="mono">${esc(g.record.model)}</span> · ${g.record.reply.split(/\s+/).length} words · ${g.record.latency_s}s`;
+  $('shScore').innerHTML = `<span class="${cls(g.verdict.score)} mono">${f2(g.verdict.score)}</span>`;
+  $('shReason').textContent = g.verdict.reason;
+  $('shReply').textContent = g.record.reply;
+  $('shInput').textContent = c.input || '';
+  $('shExpected').textContent = c.expected || '';
+  $('sheet').classList.add('open');
 }
+$('shClose').onclick = () => { $('sheet').classList.remove('open'); selectedCell = null; renderGrid(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('shClose').onclick(); });
 
 function renderVersions() {
   const vs = versions();
-  if (!vs.length) { $('versions').innerHTML = ''; $('promptView').textContent = meta ? meta.prompt : '–'; $('changelog').textContent = meta ? 'task prompt v1 (no run yet)' : ''; return; }
+  if (!vs.length) { $('versions').innerHTML = ''; $('changelog').innerHTML = meta ? '<span class="muted">Prompt v1 comes from the task. Both agents start here.</span>' : ''; $('promptView').textContent = meta ? meta.prompt : '–'; return; }
   if (selectedVersion === null || !vs.some(v => v.version === selectedVersion)) selectedVersion = vs[vs.length - 1].version;
-  $('versions').innerHTML = vs.map(v => `<button class="secondary${v.version === selectedVersion ? ' active' : ''}" data-v="${v.version}">v${v.version}</button>`).join('');
+  const meanFor = (v) => { const r = sortedRounds().find(x => x.student_prompt.version === v); return r ? f2(r.student.mean) : 'next'; };
+  $('versions').innerHTML = vs.map(v => `<button class="vtab${v.version === selectedVersion ? ' active' : ''}" data-v="${v.version}">v${v.version} <span class="m mono">${meanFor(v.version)}</span></button>`).join('');
   $('versions').querySelectorAll('button').forEach(b => b.onclick = () => { selectedVersion = +b.dataset.v; renderVersions(); });
-  const cur = vs.find(v => v.version === selectedVersion);
-  const prev = vs.find(v => v.version === selectedVersion - 1);
-  $('changelog').textContent = `v${cur.version} · ${cur.changelog}`;
+  const cur = vs.find(v => v.version === selectedVersion), prev = vs.find(v => v.version === selectedVersion - 1);
+  const words = cur.text.split(/\s+/).length;
+  $('changelog').innerHTML = `${esc(cur.changelog)}<span class="muted">v${cur.version} · ${words} words${prev ? ` · ${prev.text.split(/\s+/).length} → ${words}` : ''}</span>`;
   $('promptView').innerHTML = (prev && $('showDiff').checked) ? diffHtml(prev.text, cur.text) : esc(cur.text);
 }
 $('showDiff').onchange = renderVersions;
 
 function renderRecommendation() {
-  const rounds = run ? [...run.rounds].sort((a, b) => a.round - b.round) : [];
-  const last = rounds[rounds.length - 1];
-  $('recommendation').textContent = last ? `round ${last.round}\n\n${last.recommendation}` : '–';
+  const rounds = sortedRounds(), last = rounds[rounds.length - 1];
+  $('recSub').textContent = last ? `after round ${last.round}` : '';
+  $('recommendation').innerHTML = last ? esc(last.recommendation) : '<span class="empty">The evaluator compares teacher and student per case and tells the coach what pattern to fix.</span>';
 }
 
-// Line-based LCS diff; small inputs, so O(n·m) is fine.
+// Line-based LCS diff; inputs are small.
 function diffHtml(a, b) {
-  const A = a.split('\n'), B = b.split('\n');
-  const n = A.length, m = B.length, L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  const A = a.split('\n'), B = b.split('\n'), n = A.length, m = B.length;
+  const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
   const out = []; let i = 0, j = 0;
   while (i < n && j < m) {
@@ -322,16 +544,15 @@ function diffHtml(a, b) {
 // ---------- single-case test ----------
 $('useLatest').onclick = () => { const vs = versions(); $('testPrompt').value = vs.length ? vs[vs.length - 1].text : meta.prompt; };
 $('testRun').onclick = async () => {
-  $('testRun').disabled = true; $('testOut').innerHTML = '<div class="muted">running…</div>';
+  $('testRun').disabled = true; $('testNote').textContent = 'running…'; $('testOut').innerHTML = '';
   const body = { case: $('testCase').value, agent: $('testAgent').value, prompt: $('testPrompt').value || null };
   const res = await fetch('/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-  $('testRun').disabled = false;
+  $('testRun').disabled = false; $('testNote').textContent = '';
   if (!res.ok) { $('testOut').innerHTML = `<div class="bad">${esc((await res.json()).detail || res.statusText)}</div>`; return; }
   const { record, verdict } = await res.json();
-  $('testOut').innerHTML = `<div class="verdict"><span class="score ${cls(verdict.score)}">${f2(verdict.score)}</span>
-     <span class="muted">· ${esc(record.agent)} · ${esc(record.model)} · ${record.reply.split(/\s+/).length} words · ${record.latency_s}s</span></div>
-     <pre style="margin-top:8px">${esc(record.reply)}</pre>
-     <div class="changelog" style="margin-top:8px">${esc(verdict.reason)}</div>`;
+  $('testOut').innerHTML = `<div><span class="score mono ${cls(verdict.score)}">${f2(verdict.score)}</span> <span class="muted" style="margin-left:8px">${esc(record.agent)} · <span class="mono">${esc(record.model)}</span> · ${record.reply.split(/\s+/).length} words · ${record.latency_s}s</span></div>
+     <pre style="margin-top:10px">${esc(record.reply)}</pre>
+     <div class="t" style="margin-top:10px; font-size:13px; line-height:1.55">${esc(verdict.reason)}</div>`;
 };
 
 boot();
