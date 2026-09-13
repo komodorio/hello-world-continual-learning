@@ -22,6 +22,15 @@ dependencies = [
 [project.scripts]
 prompt-coach = "prompt_coach.cli:app"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# `uv run pytest` stays offline; `uv run pytest -m live` runs the one test that calls real models.
+addopts = "-m 'not live'"
+markers = ["live: calls real models; needs an API key"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::pydantic.warnings.PydanticDeprecatedSince20"]
+
 [build-system]
 requires = ["uv_build>=0.9.21,<0.10.0"]
 build-backend = "uv_build"
