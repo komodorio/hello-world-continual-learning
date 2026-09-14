@@ -7,6 +7,7 @@
 models:
   teacher: anthropic/claude-sonnet-5
   student: anthropic/claude-haiku-4-5-20251001
+  # student: baseten/moonshotai/Kimi-K2.5    # example: Kimi on Baseten Model APIs; needs BASETEN_API_KEY in .env
   # student: openrouter/moonshotai/kimi-k2   # example: swap the student to Kimi via OpenRouter
   evaluator: anthropic/claude-sonnet-5
   coach: anthropic/claude-sonnet-5
