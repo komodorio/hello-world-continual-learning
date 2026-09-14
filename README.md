@@ -5,10 +5,17 @@ a support job as well as an expensive one, and the only thing that changes betwe
 cheap model's prompt. The code fits in an afternoon of reading and a run costs a few dollars in
 model calls.
 
+The job is customer support for an online store. A customer writes in, the agent gets the message
+and the one policy snippet that applies to it, and the agent writes the reply. The tickets are the
+ones every store gets: a refund request just past the return window, a cancellation and a data
+export in the same message, a delivery slot that does not exist, an angry customer who wants more
+than policy allows. Each one has a detail that a cheap model tends to get wrong, and a checklist of
+what a good reply has to contain, so a reply can be scored and the score can be explained.
+
 ## What is in it
 
-- **Task**: a support desk for a fictional coffee roaster. One folder with the starting prompt, the
-  output-format rules, and the test cases.
+- **Task**: the support desk of Loomi, a fictional online store for home goods. One folder with the
+  starting prompt, the output-format rules, and the test cases.
 - **Test cases**: four customer tickets. Each one is a customer message plus the policy snippet that
   applies to it, a `trap` (the thing a cheap model tends to get wrong), and an `expected` checklist
   of what a good reply must say, must not do, and must answer.
@@ -32,16 +39,23 @@ works.
 
 ```mermaid
 flowchart LR
-    A[Both models answer<br/>the four tickets] --> B[The evaluator scores<br/>every reply]
-    B --> C{Is the student<br/>close enough<br/>to the teacher?}
-    C -- yes --> D([Done])
-    C -- no --> E[The coach writes the student<br/>a new prompt]
-    E --> A
+    U[1. A new ticket<br/>message + policy snippet] --> T[2. Teacher answers<br/>expensive model]
+    U --> S[2. Student answers<br/>cheap model]
+    T --> E[3. Evaluator scores each reply<br/>0–1, with a written reason]
+    S --> E
+    E --> Q{4. Is the student<br/>within the gap<br/>of the teacher?}
+    Q -- no --> C[5. Coach rewrites<br/>the student's prompt]
+    C -- next round --> U
+    Q -- yes --> D([Done])
 ```
 
-The student starts with the same prompt as the teacher. Each round, the coach reads where the
-student lost points and why, and rewrites the student's prompt. The loop ends when the student's
-average score is within a small gap of the teacher's average, or when the round budget is spent.
+1. A ticket comes in: the customer's message plus the policy snippet that applies to it.
+2. Both agents answer it, the teacher with its fixed prompt and the student with its current one.
+3. The evaluator reads each reply against the ticket's checklist and gives it a score and a reason.
+4. After all four tickets, the student's average is compared with the teacher's.
+5. If the student is still behind, the coach reads the low scores and the reasons and writes the
+   student a new prompt. The next round starts with that prompt. When the student is close enough,
+   or the round budget is spent, the loop stops.
 
 ## How it works, step by step
 
@@ -84,7 +98,14 @@ sequenceDiagram
 
 ## What you see
 
-![The web page after a five-round run. The student went from 0.69 to 0.84 while the teacher averaged 0.90.](docs/ui.png)
+![The web page after a three-round run. The student went from 0.52 to 0.82 while the teacher averaged 0.87.](docs/ui.png)
+
+The page shows one run. At the top, the four role cards tell you which model plays each role and its
+current score. The chart underneath is the student's average per round next to the teacher's, with
+the dashed line marking where the loop is allowed to stop. The grid on the right has one row per
+round and one column per ticket, teacher and student side by side, so you can see which ticket moved
+when the prompt changed. Below that are the prompt versions, with the coach's changelog and a diff
+against the previous version, and the evaluator's brief to the coach.
 
 <table>
   <tr>
@@ -97,25 +118,28 @@ sequenceDiagram
   </tr>
 </table>
 
-This is what the evaluator writes. It is the reason behind the 0.10 the student got on the refund
-ticket in round three:
+Every score can be explained. In round one the student scored 0.15 on the refund ticket. This is
+what it wrote to the customer:
 
-> The agent fundamentally misread the timeline: Dana opened the bag 3 days ago (well within the
-> 7-day report window) and the bag was opened 38 days after delivery, which is within the 60-day
-> freshness guarantee window. Instead, the agent incorrectly calculated the 7-day window from the
-> delivery date rather than the opening date, wrongly concluded Dana is 31 days past the deadline,
-> and denied both the freshness guarantee and the standard return, effectively refusing a claim the
-> policy clearly allows. This is a wrong policy decision, which caps the score at 0.4 […] The reply
-> also never answers the customer's second question about where the money goes back to.
+> Thanks for reaching out. I'm sorry to hear two mugs arrived cracked. The good news is our damage
+> guarantee covers this for 60 days from delivery, and you're well within that window. However, we
+> do require damage to be reported within 7 days of unpacking, and you've just unpacked them 38 days
+> after delivery. Unfortunately, this falls outside our 7-day reporting window, so I'm unable to
+> process a claim under our damage guarantee.
 
-And this is the brief the evaluator gave the coach after round one:
+And this is the evaluator's reason for the 0.15, lightly shortened:
 
-> The student consistently identifies the right policy and mechanics but loses points through
-> incomplete execution: leaving required elements implicit rather than stated, dropping specific
-> required details (the 5-day investigation window, the 60-day-and-7-day dual eligibility
-> condition), missing empathy cues the checklist expects, and in one case outright omitting the
-> single most useful policy option (Saturday pickup) in favor of a useless alternative. […] The
-> teacher's edge isn't different policy knowledge, it's completeness and precision.
+> The agent misapplied the 7-day rule. Dana unpacked the mugs 3 days ago and reported immediately,
+> which is within the 7-day-from-unpacking window; the 38 days refers to time since delivery, not
+> since unpacking. The agent denied the damage guarantee claim entirely, which is a wrong policy
+> decision and caps the score at 0.4. It also failed to ask for the photo, did not mention the
+> 2-business-day processing time, and never offered the choice between refund and replacement.
+
+The coach does not see the checklist, but it sees reasons like this one for every low score, plus a
+one-paragraph brief from the evaluator. After round one the brief said the student "loses points on
+missing required details that the teacher reliably includes … it misapplied the reporting-window
+rule entirely, wrongly denying a valid claim", and asked the coach to make the student "verify
+date/window calculations against the policy's actual reference point before applying rules".
 
 ## Running it
 
@@ -133,6 +157,14 @@ uv run prompt-coach serve            # the same loop in the browser at http://12
 
 A round is about 18 model calls, and a run usually stops after two to five rounds.
 
+In the browser, the form at the top left is where you start a run. The chips are the tickets; click
+one to leave it out, and click the `?` on a chip to read its trap and the checklist a good reply has
+to satisfy. `rounds` is the budget and `gap` is how close the student has to get to the teacher's
+average before the loop stops. Press *Start run* and the page fills in as the round goes: the four
+role cards show who is working, the score grid gets a row per round, and the chart and the prompt
+versions update when the round ends. Saved runs are listed under the form, each with its final
+student score and whether it caught up; click one to open it.
+
 ```bash
 uv run prompt-coach run --case refund --case compensation --rounds 3   # a subset of tickets, a shorter budget
 uv run prompt-coach test --case refund                                  # one model, one ticket, one verdict
@@ -148,58 +180,68 @@ in `config.yaml` and put the provider's key in `.env`.
 ## One real run, and how the prompt changed
 
 Claude Sonnet as teacher, Claude Haiku as student, all four tickets, gap 0.1, budget five rounds.
+The loop stopped after three.
 
 | round | student prompt | teacher | student | what the coach changed, and what happened |
 |---|---|---|---|---|
-| 1 | v1, 74 words, same as the teacher's | 0.93 | 0.69 | The student got the policy decisions right but dropped required details and ran over word limits. |
-| 2 | v2, 162 words | 0.93 | 0.66 | Added: answer every request, refuse explicitly, quote exact figures. The refund ticket fell to 0.35. |
-| 3 | v3, 218 words | 0.95 | 0.59 | Added: "state the eligibility decision first and definitively". The student refused a valid refund. Refund at 0.10. |
-| 4 | v4, 220 words | 0.95 | 0.77 | Added: work out which date each policy window counts from. Refund back to 1.00. |
-| 5 | v5, 245 words | 0.77 | 0.84 | Replaced the date rule with "quote the policy's timing verbatim". Caught up. |
+| 1 | v1, 75 words, same as the teacher's | 0.89 | 0.52 | Refund 0.15 (wrongly refused a valid claim), missing-feature 0.35 (invented a delivery timeline, never offered Saturday pickup). |
+| 2 | v2, 220 words | 0.87 | 0.59 | Added: cover every entitlement and next step, check which date each window counts from, never deny what the policy supports. Refund rose to 0.55, but three replies went over the word limit and were capped at 0.6. |
+| 3 | v3, 230 words | 0.86 | 0.82 | Rewrote the same rules with a hard word cap: "cut wording rather than content". Refund 0.90, missing-feature 0.85, two-questions 0.98. Caught up. |
 
-The student started with exactly the teacher's prompt:
+The student started with the teacher's prompt, word for word:
 
 ```
-You are a support agent for Beanhouse, a small online coffee roaster.
+You are a support agent for Loomi, an online store for home goods.
 Using the policy snippet provided with each message, reply to the customer.
 
 Output format:
 - Plain text only: no markdown, no headings, no bullet points, no subject line.
 - Open with a greeting that uses the customer's first name.
-- Sign off with exactly: "Maya, Beanhouse Support".
+- Sign off with exactly: "Maya, Loomi Support".
 - Stay under 120 words unless the ticket or its policy states a tighter limit.
 ```
 
-After round two the coach wrote v3. This is the sentence that did the damage; it reads like good
-advice, and Haiku followed it straight into a wrong refusal:
+After round one the coach added one paragraph. The middle of it is aimed straight at the refund
+mistake above:
 
 ```
-First work out which trigger event the policy actually uses (delivery date, open date,
-report date) and state the customer's eligibility or coverage decision plainly and
-definitively at the start - never hedge, guess, or recalculate mid-reply.
+Read date and window rules carefully: check exactly which event each window counts from
+(delivery, unpacking, report date) before deciding if the customer qualifies - do not
+assume the wrong reference point. If the customer qualifies for something, say so and
+give the concrete next step (what to send, where, and the timeline); never deny a claim
+that the policy's actual wording supports.
 ```
 
-Two rounds later the coach could see that v2 and v3 had both scored below v1, so in v5 it replaced
-that instruction with this one, and the student caught up:
+That fixed the decision and created a new problem: the student now wrote everything it was told to
+include and ran to 124, 143 and 125 words on three tickets, so the evaluator capped those at 0.6.
+The brief after round two said so in plain terms, and v3 kept the same rules but changed how they
+are applied:
 
 ```
-State only what the policy actually says. When a rule names specific days, hours, or
-cutoffs, repeat them in the policy's own terms rather than calculating a new date or
-time yourself. If you must combine two policy facts to answer, only do so when the
-result is certain and simple - otherwise state each fact plainly and let the customer
-work out the rest, rather than inventing a specific figure.
+Cover every entitlement, choice, timeframe, and required next step the policy states, and
+answer every question asked, but write as briefly as possible - use short sentences, no
+repeated phrases, no restating what the customer already said. Never cut a required policy
+detail just to save words; instead trim greetings, transitions, and closing remarks.
 ```
 
-Three things are worth noticing. First, a prompt change is a hypothesis: v2 and v3 looked better
-than v1 and scored worse, and nothing in their text tells you that. Second, the coach only recovered
-because it could see how its earlier versions had scored; the first version of the coach, which
-could not, added rules every round until the prompt was 553 words and the student was worse than
-where it started. Third, the teacher's own score dropped to 0.77 in round five, so the stop rule
-compares with the teacher's average (0.90) and not with the current round, or the student would have
-"won" against a bad day.
+and the last format line became:
 
-Not every run ends like this one. Another run with the same settings went 0.72, 0.68, 0.68, 0.49
-and spent its budget without catching up. The run cards in the web page show both.
+```
+- Stay under 120 words unless the ticket or its policy states a tighter limit - treat this
+  as a hard cap, not a target, and cut wording rather than content to meet it.
+```
+
+Three things are worth noticing. First, each version fixed what the previous round's reasons pointed
+at, and each fix had a side effect that only the scores revealed; the v2 prompt reads like an
+improvement, and on the mean it barely was. Second, the coach converged because it is shown how its
+earlier versions scored, which is what stopped it from adding rules on top of rules; an early
+version of the coach without that history grew the prompt to 553 words over three rounds while the
+student got worse. Third, the target is the teacher's average across rounds (0.87), not the current
+round, so a weak teacher round cannot end the loop on its own.
+
+Not every run ends like this one. With the same settings on an earlier version of the tickets, one
+run went 0.72, 0.68, 0.68, 0.49 and spent its budget without catching up. The run cards in the web
+page show each saved run's final score and whether it caught up.
 
 ## Limits
 
@@ -207,8 +249,9 @@ Four tickets is enough to see the loop and not enough to trust an average: one e
 moves it by 0.025. Read the per-ticket scores. The evaluator is a language model with a checklist,
 so treat its scores as a trend and its written reasons as the signal. The coach optimises against
 these four tickets and there is no hold-out set, so the prompts it writes may fit them; they contain
-no customer names or figures, but this repo cannot prove they generalise. Only the prompt changes:
-no tools, no retrieval, no fine-tuning.
+no customer names or figures, but this repo cannot prove they generalise. In this example we did
+not change the model, add tool calls, add retrieval, or fine-tune anything; the student's prompt is
+the only thing that changes, so that the effect of one lever is visible on its own.
 
 ## Under the hood
 

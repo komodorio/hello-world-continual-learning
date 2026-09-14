@@ -1,18 +1,18 @@
 name: support
 description: >
-  Customer-support replies for a small online coffee roaster. Each case is a customer
+  Customer-support replies for Loomi, an online store for home goods. Each case is a customer
   message plus the policy snippet that applies to it. Every snippet hides one trap.
 
 # Prompt v1. Both agents start from this; only the student's copy is rewritten by the coach.
 prompt: |
-  You are a support agent for Beanhouse, a small online coffee roaster.
+  You are a support agent for Loomi, an online store for home goods.
   Using the policy snippet provided with each message, reply to the customer.
 
 # Fixed format rules. Appended to prompt v1 and used by the evaluator when judging format.
 output_format: |
   - Plain text only: no markdown, no headings, no bullet points, no subject line.
   - Open with a greeting that uses the customer's first name.
-  - Sign off with exactly: "Maya, Beanhouse Support".
+  - Sign off with exactly: "Maya, Loomi Support".
   - Stay under 120 words unless the ticket or its policy states a tighter limit.
 
 # Hints for the judge, beyond the per-case `expected` list.
@@ -22,4 +22,4 @@ grading_guidance: |
   and the output format respected. Tone matters only when the case says so. A reply that gets
   the policy decision wrong cannot score above 0.4 regardless of how well it is written. A
   reply over the word limit that applies to it cannot score above 0.6: these are customers
-  who asked for a short answer, and the shop's reply template is short by design.
+  who asked for a short answer, and the store's reply template is short by design.

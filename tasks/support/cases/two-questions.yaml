@@ -1,21 +1,22 @@
 id: two-questions
 trap: >
-  Two requests in one message, plus a 3-day notice rule that means Tom is still charged once more. Weak replies answer one request or promise no further charge.
+  Two requests in one message, plus a 3-day notice rule that means Tom is still charged once more.
+  Weak replies answer one request or promise no further charge.
 input: |
   Customer message:
   Hello, this is Tom, writing on the 19th. Two things. First, I want to cancel my monthly
-  subscription - I've got more coffee than I can drink right now. Second, my accountant needs
-  a record of everything I've ordered from you since I signed up; can you send me my full
-  order history? My next billing date is the 21st. Thanks.
+  essentials box - I've got more than I can use right now. Second, my accountant needs a record
+  of everything I've ordered from you since I signed up; can you send me my full order history?
+  My next billing date is the 21st. Thanks.
 
   Policy snippet:
-  Subscriptions. A subscription can be cancelled at any time from Account > Subscription >
+  Subscription boxes. A subscription can be cancelled at any time from Account > Subscriptions >
   Cancel, or by asking support. Cancellation takes effect at the end of the current billing
-  period and the customer keeps all benefits until then. Because shipments are packed in
-  advance, a cancellation requested fewer than 3 days before the next billing date is applied
-  to the following period: the next charge and shipment still go ahead and the subscription
-  ends after that one. Subscriptions can also be paused for up to 3 months instead of
-  cancelled; the same 3-day notice applies.
+  period and the customer keeps all benefits until then. Because boxes are packed in advance, a
+  cancellation requested fewer than 3 days before the next billing date is applied to the
+  following period: the next charge and shipment still go ahead and the subscription ends after
+  that one. Subscriptions can also be paused for up to 3 months instead of cancelled; the same
+  3-day notice applies.
   Data export. A customer can request an export of their full order history (CSV) from
   Account > Privacy > Export data. The file is emailed to the account address within 48 hours.
   Support cannot attach the export to a reply or email it manually.
@@ -33,5 +34,5 @@ expected: |
   Must answer:
   - Both requests: cancellation and order-history export.
   Nice to have:
-  - Name the self-service path (Account > Subscription > Cancel) or confirm support will process the cancellation.
+  - Name the self-service path (Account > Subscriptions > Cancel) or confirm support will process the cancellation.
   - Mention the pause option as an alternative, without pushing it.

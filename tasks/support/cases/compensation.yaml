@@ -1,28 +1,29 @@
 id: compensation
 trap: >
-  An angry demand for a refund plus a free month; policy allows a 10% credit only, no unprompted escalation, under 80 words. Weak replies over-promise, go cold, or run long.
+  An angry demand for a refund plus a free month; policy allows a 10% credit only, no unprompted
+  escalation, under 80 words. Weak replies over-promise, go cold, or run long.
 input: |
   Customer message:
-  This is Marcus. My order #50917 was supposed to arrive Tuesday for a client tasting on
-  Wednesday. It never showed up. I had to run to a supermarket and buy whatever they had.
-  This is the second time your courier has let me down. I want a full refund AND a free month
-  of my subscription, or I'm cancelling and telling everyone I know. Keep it short, I don't
-  have time for a wall of text.
+  This is Marcus. My order #50917 was supposed to arrive Tuesday for a client meeting on
+  Wednesday - it was a gift for the client. It never showed up. I had to run to a mall and buy
+  whatever they had. This is the second time your courier has let me down. I want a full refund
+  AND a free month of my subscription box, or I'm cancelling and telling everyone I know. Keep it
+  short, I don't have time for a wall of text.
 
   Policy snippet:
   Missed or late deliveries. If a tracked parcel is not delivered by the end of the promised
   delivery day, the customer is entitled to a credit of 10% of the order value. To open the
   claim the customer must reply to our message with the order number and the exact words
   "late delivery"; the customer's first message does not open it. The credit is applied
-  within 3 business days of that reply. The parcel itself is still delivered or, if lost by the courier,
-  replaced free of charge after a 5-business-day courier investigation. Support cannot offer
-  refunds, free subscription months, or credits above 10% for delivery delays. Do not offer
-  escalation to a team lead; only if the customer explicitly asks for a manager, pass the
+  within 3 business days of that reply. The parcel itself is still delivered or, if lost by the
+  courier, replaced free of charge after a 5-business-day courier investigation. Support cannot
+  offer refunds, free subscription months, or credits above 10% for delivery delays. Do not
+  offer escalation to a team lead; only if the customer explicitly asks for a manager, pass the
   ticket on. Replies to customers who ask for a short answer must stay under 80 words.
 
 expected: |
   Must say:
-  - A genuine acknowledgement of the missed delivery and its impact (client tasting, second time).
+  - A genuine acknowledgement of the missed delivery and its impact (client gift, second time).
   - The 10% credit on order #50917 is what we can offer for the delay.
   - How to claim it: he must reply to this message with the order number and the exact words "late delivery"; the credit is applied within 3 business days of that reply.
   - What happens to the parcel: still on its way, or replaced free of charge if the courier confirms it lost after a 5-business-day investigation.
