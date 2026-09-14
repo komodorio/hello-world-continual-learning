@@ -19,7 +19,7 @@ tends to get wrong:
 | ticket | what the customer wants | the trap |
 |---|---|---|
 | `refund` | a refund for mugs that arrived cracked, noticed 38 days after delivery | looks like a flat "no" under the 30-day return rule, but the damage guarantee applies; and where the gift-card half goes is easy to skip |
-| `two-questions` | cancel a subscription *and* get a full order history | answering only one request, or promising no further charge when the 3-day notice rule means one more |
+| `multi-request` | cancel a subscription, get a full order history, *and* keep a loyalty discount | dropping one of the three, or promising no further charge when the 3-day notice rule means one more |
 | `missing-feature` | Sunday delivery, or Sunday pickup, for a party this weekend | neither exists; weak replies invent one instead of offering Saturday pickup |
 | `compensation` | a full refund plus a free month for a missed delivery | policy allows a 10% credit only, in under 80 words; weak replies over-promise, go cold, or run long |
 
@@ -270,6 +270,41 @@ a non-reasoning model in those roles.
 Cheaper first runs: `uv run prompt-coach test --case refund --model baseten/moonshotai/Kimi-K2.5`
 runs one ticket on one model and grades it, without the loop.
 
+### Example: the same models on AWS Bedrock, with no Anthropic key
+
+If your Claude access is through AWS rather than an Anthropic key, prefix each model with
+`bedrock/` and use Bedrock's own model id. LiteLLM authenticates with the ordinary boto3
+credential chain, so an SSO profile, an instance role or static keys all work, and no
+`ANTHROPIC_API_KEY` is involved.
+
+```yaml
+# config.yaml — all four roles on Bedrock
+models:
+  teacher: bedrock/us.anthropic.claude-sonnet-5
+  student: bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0
+  evaluator: bedrock/us.anthropic.claude-sonnet-5
+  coach: bedrock/us.anthropic.claude-sonnet-5
+```
+
+```bash
+# .env — no API key, but the region is required: LiteLLM does not read it from ~/.aws/config
+AWS_REGION_NAME=us-east-1
+AWS_PROFILE=my-sso-profile      # or AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+```
+
+Bedrock ids are not the Anthropic ones and are not guessable from them: Sonnet 5 is
+`us.anthropic.claude-sonnet-5` with no version suffix, while Haiku 4.5 is
+`us.anthropic.claude-haiku-4-5-20251001-v1:0` with one. The `us.` prefix is a cross-region
+inference profile; `global.` variants exist too and are not pinned to a region. List what your
+account can actually call, and check each one is `ACTIVE`:
+
+```bash
+aws bedrock list-inference-profiles --region us-east-1 --query 'inferenceProfileSummaries[?contains(inferenceProfileId,`anthropic`)].[inferenceProfileId,status]' --output text
+```
+
+A model your account has not been granted access to fails at the first call with
+`AccessDeniedException`, not at startup.
+
 ## Using your own task
 
 Copy `tasks/support/` to a new folder, edit `task.yaml` (the v1 prompt, the output-format rules,
@@ -286,7 +321,7 @@ loop stopped after three.
 |---|---|---|---|---|
 | 1 | v1, same as the teacher's, 75 words | 0.89 | 0.52 | Refund 0.15 (refused a valid claim), missing-feature 0.35 (invented a delivery option). |
 | 2 | v2, 220 words | 0.87 | 0.59 | Decisions fixed, refund up to 0.55; but three replies ran over the word limit and were capped at 0.6. |
-| 3 | v3, 230 words | 0.86 | 0.82 | Same rules, hard word cap. Refund 0.90, missing-feature 0.85, two-questions 0.98. Caught up. |
+| 3 | v3, 230 words | 0.86 | 0.82 | Same rules, hard word cap. Refund 0.90, missing-feature 0.85, multi-request 0.98. Caught up. |
 
 After round one the coach added a paragraph to the student's prompt. The middle of it targets the
 refund mistake above:

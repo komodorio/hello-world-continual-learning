@@ -12,7 +12,7 @@ from prompt_coach.types import Event, RunRecord
 
 def new_run_id() -> str:
     """Sortable timestamp plus a short random suffix so two runs in the same second never collide."""
-    return f"{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(2)}"
+    return f"{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}"
 
 
 def save_run(run: RunRecord, runs_dir: Path) -> Path:

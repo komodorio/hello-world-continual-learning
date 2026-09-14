@@ -9,7 +9,7 @@ from tests.conftest import SUPPORT_TASK
 def test_loads_the_four_support_cases() -> None:
     task = load_task(SUPPORT_TASK)
     assert task.name == "support"
-    assert [c.id for c in task.cases] == ["compensation", "missing-feature", "refund", "two-questions"]
+    assert [c.id for c in task.cases] == ["compensation", "missing-feature", "multi-request", "refund"]
     assert "Output format:" in task.initial_prompt
     for case in task.cases:
         assert "Policy snippet:" in case.input

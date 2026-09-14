@@ -39,18 +39,23 @@ def _sorted(graded: list[Graded], cases: list[Case]) -> list[Graded]:
     return sorted(graded, key=lambda g: (order[g.record.case_id], g.record.agent != "teacher"))
 
 
+def qualifies(result: RoundResult, gap: float) -> bool:
+    """Did the student come within ``gap`` of the teacher this round?"""
+    return result.student.mean >= result.teacher.mean - gap
+
+
 def stop_reason(
-    result: RoundResult, gap: float, max_rounds: int, teacher_baseline: float | None = None, min_rounds: int = 1
+    result: RoundResult, gap: float, max_rounds: int, min_rounds: int = 1, prev_qualified: bool = False
 ) -> str:
     """Empty string means keep going.
 
-    ``teacher_baseline`` is the teacher's mean averaged over all rounds so far; using it instead of
-    this round's teacher mean stops one lucky or unlucky teacher round from ending the loop.
-    ``min_rounds`` keeps the gap from closing before that average has enough samples.
+    The gap has to hold for two rounds running. A single round's student mean is noisy - a handful
+    of cases, graded by a model - and over a multi-round budget the student gets one chance per
+    round to clear the bar by luck alone, so a one-round rule stops on the first such round rather
+    than on a real catch-up. ``min_rounds`` sets a floor on how early that can happen at all.
     """
-    baseline = result.teacher.mean if teacher_baseline is None else teacher_baseline
-    if result.round >= min_rounds and result.student.mean >= baseline - gap:
-        return f"gap closed: student {result.student.mean:.2f} within {gap:.2f} of teacher {baseline:.2f}"
+    if result.round >= min_rounds and prev_qualified and qualifies(result, gap):
+        return f"gap closed: student within {gap:.2f} of teacher {result.teacher.mean:.2f} for two rounds running"
     if result.round >= max_rounds:
         return f"round budget spent ({max_rounds})"
     return ""
@@ -72,26 +77,28 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
         teacher_prompt=teacher_prompt,
     )
     case_inputs = {c.id: c.input for c in task.cases}
+    # The teacher's prompt never changes, so its replies and their grades are graded once in round
+    # one and carried forward. Re-running it every round only resampled the evaluator's noise, and
+    # that noise moved the very bar the student is measured against.
+    teacher_graded: list[Graded] | None = None
+    prev_qualified = False
     yield Event(type="run_started", run=run.model_copy(deep=True))
 
     try:
         for round_no in range(1, settings.max_rounds + 1):
             yield Event(type="round_started", round=round_no, prompt=student_prompt)
 
-            teacher = Agent("teacher", config.models.teacher, teacher_prompt, version=1)
             student = Agent("student", config.models.student, student_prompt.text, version=student_prompt.version)
-            graded = _sorted(
-                list(
-                    await asyncio.gather(
-                        *[
-                            _run_and_grade(a, c, task, config.models.evaluator)
-                            for c in task.cases
-                            for a in (teacher, student)
-                        ]
-                    )
-                ),
-                task.cases,
+            pending = [(student, c) for c in task.cases]
+            if teacher_graded is None:
+                teacher = Agent("teacher", config.models.teacher, teacher_prompt, version=1)
+                pending += [(teacher, c) for c in task.cases]
+            fresh = list(
+                await asyncio.gather(*[_run_and_grade(a, c, task, config.models.evaluator) for a, c in pending])
             )
+            if teacher_graded is None:
+                teacher_graded = [g for g in fresh if g.record.agent == "teacher"]
+            graded = _sorted([*teacher_graded, *[g for g in fresh if g.record.agent == "student"]], task.cases)
             for g in graded:
                 yield Event(type="graded", round=round_no, graded=g)
 
@@ -110,14 +117,14 @@ async def run_loop(config: Config, task: Task, *, run_id: str | None = None) -> 
                 student=student_card,
                 recommendation=recommendation,
             )
-            teacher_means = [r.teacher.mean for r in run.rounds] + [teacher_card.mean]
             reason = stop_reason(
                 result,
                 settings.gap,
                 settings.max_rounds,
-                sum(teacher_means) / len(teacher_means),
                 min_rounds=settings.min_rounds,
+                prev_qualified=prev_qualified,
             )
+            prev_qualified = qualifies(result, settings.gap)
             if not reason:
                 failures = coach.select_failures(graded, settings.coach_threshold)
                 history = [

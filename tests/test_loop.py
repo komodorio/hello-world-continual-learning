@@ -17,15 +17,15 @@ def rounds_of(events: list[Event]) -> list[int]:
 async def test_stops_when_the_gap_closes(fake: FakeModel, config: Config, support_task: Task) -> None:
     ids = [c.id for c in support_task.cases]
     fake.teacher_scores = {i: 0.9 for i in ids}
-    fake.student_scores = [{i: 0.5 for i in ids}, {i: 0.85 for i in ids}]  # v1 → v2
+    fake.student_scores = [{i: 0.5 for i in ids}, {i: 0.85 for i in ids}]  # v1 → v2, then v2's score repeats
     events = await collect(config, support_task)
-    assert rounds_of(events) == [1, 2]
+    assert rounds_of(events) == [1, 2, 3], "round 2 qualifies but only round 3 makes it two in a row"
     finished = events[-1]
     assert finished.type == "run_finished" and finished.run is not None
     assert finished.run.stop_reason.startswith("gap closed")
-    assert [r.student.mean for r in finished.run.rounds] == [0.5, 0.85]
+    assert [r.student.mean for r in finished.run.rounds] == [0.5, 0.85, 0.85]
     assert finished.run.rounds[0].next_prompt is not None and finished.run.rounds[0].next_prompt.version == 2
-    assert finished.run.rounds[1].next_prompt is None, "no coaching after the last round"
+    assert finished.run.rounds[2].next_prompt is None, "no coaching after the last round"
 
 
 async def test_stops_at_max_rounds(fake: FakeModel, config: Config, support_task: Task) -> None:
@@ -64,29 +64,29 @@ async def test_best_round_is_highest_student_mean_not_last(fake: FakeModel, conf
     assert run.best_round.round == 2 and run.best_round.student_prompt.version == 2
 
 
-async def test_stop_rule_uses_teacher_average_not_a_single_lucky_round(
-    fake: FakeModel, config: Config, support_task: Task
-) -> None:
-    """Teacher 0.9 then a bad 0.7 round: with the round-only rule the student at 0.65 would 'converge'."""
+async def test_one_qualifying_round_does_not_stop_the_loop(fake: FakeModel, config: Config, support_task: Task) -> None:
+    """A single lucky student round is not a catch-up: the gap has to hold twice running."""
     ids = [c.id for c in support_task.cases]
     config.loop.max_rounds = 3
-    fake.student_scores = [{i: 0.5 for i in ids}, {i: 0.65 for i in ids}, {i: 0.65 for i in ids}]
-    teacher_by_round = [0.9, 0.7, 0.9]
-    original = fake._reply
-
-    def reply(model: str, system: str, user: str) -> str:
-        if model == "fake/judge" and "[teacher v" in user:
-            student_version = max((int(m) for m in __import__("re").findall(r"\[v(\d+)\]", system + user)), default=1)
-            round_no = student_version  # teacher runs alongside the student's version in the same round
-            fake.teacher_scores = {i: teacher_by_round[round_no - 1] for i in ids}
-        return original(model, system, user)
-
-    fake._reply = reply  # type: ignore[method-assign]
-    events = await collect(config, support_task)
-    run = events[-1].run
+    fake.teacher_scores = {i: 0.9 for i in ids}
+    fake.student_scores = [{i: 0.5 for i in ids}, {i: 0.85 for i in ids}, {i: 0.5 for i in ids}]
+    run = (await collect(config, support_task))[-1].run
     assert run is not None
-    # round 2: teacher avg (0.9+0.7)/2 = 0.8, student 0.65 -> 0.65 < 0.7, keep going; round 3 hits the budget.
-    assert len(run.rounds) == 3 and run.stop_reason.startswith("round budget")
+    assert [r.student.mean for r in run.rounds] == [0.5, 0.85, 0.5]
+    assert run.stop_reason.startswith("round budget"), "round 2 cleared the bar alone and round 3 fell back"
+
+
+async def test_teacher_is_graded_once_for_the_whole_run(fake: FakeModel, config: Config, support_task: Task) -> None:
+    """The teacher's prompt never changes, so re-running it would only resample the judge's noise."""
+    config.loop.max_rounds = 3
+    fake.student_scores = [{c.id: 0.5 for c in support_task.cases}]  # never catches up
+    run = (await collect(config, support_task))[-1].run
+    assert run is not None and len(run.rounds) == 3
+    assert len([c for c in fake.calls if c["model"] == "fake/teacher"]) == len(support_task.cases)
+    assert len({r.teacher.mean for r in run.rounds}) == 1, "the bar the student is measured against holds still"
+    # every round still carries the teacher's cells, so the grid and replay are unchanged
+    for r in run.rounds:
+        assert len([g for g in r.graded if g.record.agent == "teacher"]) == len(support_task.cases)
 
 
 async def test_gap_cannot_close_before_min_rounds(fake: FakeModel, config: Config, support_task: Task) -> None:
@@ -106,7 +106,7 @@ def test_run_ids_are_unique_within_a_second() -> None:
 
 
 async def test_event_order(fake: FakeModel, config: Config, support_task: Task) -> None:
-    fake.student_scores = [{c.id: 0.5 for c in support_task.cases}, {c.id: 0.9 for c in support_task.cases}]
+    fake.student_scores = [{c.id: 0.9 for c in support_task.cases}]  # within the gap from round one
     events = await collect(config, support_task)
     n = len(support_task.cases) * 2
     expected = (
@@ -138,7 +138,7 @@ async def test_coach_only_gets_failures(fake: FakeModel, config: Config, support
 async def test_run_file_is_written_and_replays_to_the_same_events(
     fake: FakeModel, config: Config, support_task: Task
 ) -> None:
-    fake.student_scores = [{c.id: 0.5 for c in support_task.cases}, {c.id: 0.9 for c in support_task.cases}]
+    fake.student_scores = [{c.id: 0.9 for c in support_task.cases}]  # within the gap from round one
     live = await collect(config, support_task)
     path = config.runs_dir / "test-run.json"
     assert path.exists()

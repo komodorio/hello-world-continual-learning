@@ -47,8 +47,15 @@ def extract_json_object(text: str) -> dict[str, Any]:
     return data
 
 
+# A round fires every agent, evaluator and coach call at once, and providers answer a burst that
+# size with the occasional 503 (Bedrock does). One unretried failure aborts the whole round, so
+# retry here rather than at any call site; LiteLLM backs off exponentially between attempts.
+NUM_RETRIES = 3
+
+
 async def complete(model: str, messages: list[Message], **kwargs: Any) -> Any:
     """Call a LiteLLM model string with OpenAI-style messages and return the raw response."""
+    kwargs.setdefault("num_retries", NUM_RETRIES)
     return await litellm.acompletion(model=model, messages=messages, **kwargs)
 
 
@@ -66,28 +73,32 @@ def text_of(response: Any) -> str:
     return content
 
 
+def _messages(system: str, user: str) -> list[Message]:
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+
 async def complete_text(model: str, system: str, user: str, **kwargs: Any) -> str:
     """Convenience: one system + one user message in, assistant text out."""
-    messages: list[Message] = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ]
-    response = await complete(model, messages, **kwargs)
+    response = await complete(model, _messages(system, user), **kwargs)
     return text_of(response)
 
 
-async def complete_json(model: str, system: str, user: str, *, attempts: int = 2, **kwargs: Any) -> dict[str, Any]:
-    """Ask for a JSON object; retry once if the model's JSON is malformed, then raise.
+async def complete_json(model: str, system: str, user: str, *, attempts: int = 3, **kwargs: Any) -> dict[str, Any]:
+    """Ask for a JSON object; retry a malformed reply, then raise with the evidence attached.
 
     Models occasionally emit an unterminated or mangled object on the last few characters
-    (observed with finish_reason == "stop"). One retry is cheap; a second failure is reported.
+    (observed with finish_reason == "stop", so ``text_of`` lets it through). The failure that
+    reaches the caller carries the finish reason and the length it got to, because "invalid JSON"
+    on its own cannot tell a truncated reply apart from a model that ignored the format.
     """
     last_error: ModelOutputError | None = None
     for _ in range(attempts):
-        text = await complete_text(model, system, user, **kwargs)
+        response = await complete(model, _messages(system, user), **kwargs)
+        text = text_of(response)
         try:
             return extract_json_object(text)
         except ModelOutputError as exc:
-            last_error = exc
+            finish = response.choices[0].finish_reason
+            last_error = type(exc)(f"{exc} [finish_reason={finish!r}, {len(text)} chars, model={model}]")
     assert last_error is not None
     raise last_error

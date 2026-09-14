@@ -18,7 +18,7 @@ def test_select_failures_keeps_only_student_runs_below_threshold() -> None:
         graded("teacher", "refund", 0.2),  # teacher never goes to the coach
         graded("student", "refund", 0.69),
         graded("student", "compensation", 0.7),  # at threshold: not a failure
-        graded("student", "two-questions", 0.95),
+        graded("student", "multi-request", 0.95),
     ]
     assert [g.record.case_id for g in select_failures(runs, 0.7)] == ["refund"]
 

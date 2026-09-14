@@ -1,8 +1,10 @@
 id: missing-feature
 trap: >
-  Sunday delivery and Sunday pickup do not exist, stock is unknown to support, and Friday 15:30 is
-  past the cutoff. Weak replies invent an option or send the customer elsewhere instead of offering
-  Saturday pickup.
+  Neither Sunday delivery nor Sunday pickup exists, but three clauses look like they create one:
+  the express Saturday courier (cut off at 12:00, and it is 15:30 on Friday), the partner lockers
+  that open seven days a week (but not for oversized items like chairs), and trade-account
+  scheduling (Priya is not a trade account). The stock clause has the same shape: support cannot
+  see stock, except for trade accounts.
 input: |
   Customer message:
   Hey, Priya here. I'm hosting a housewarming on Sunday and I need the extra dining chairs I was
@@ -14,10 +16,19 @@ input: |
   Delivery. We ship Monday to Saturday. Orders placed before 14:00 on a shipping day leave the
   warehouse the same day; later orders leave the next shipping day. Delivery takes 1-2 shipping
   days after dispatch. We do not ship, deliver, or open for pickup on Sundays or public
-  holidays, and there is no paid Sunday option. Same-day pickup from the warehouse store is
-  available Monday to Saturday, 9:00-17:00, for orders placed at least 2 hours before collection.
+  holidays, and there is no paid Sunday option.
+  Express courier. An express Saturday delivery is available on orders placed before 12:00 on a
+  Friday, for a surcharge, within the metropolitan area.
+  Warehouse pickup. Same-day pickup from the warehouse store is available Monday to Saturday,
+  9:00-17:00, for orders placed at least 2 hours before collection.
+  Partner lockers. Collection from partner lockers is available seven days a week, 6:00-22:00,
+  for parcels under 5 kg that fit a standard locker; furniture, lighting and other oversized
+  items cannot be sent to a locker.
+  Trade accounts. Deliveries for registered trade accounts are scheduled by arrangement with the
+  account manager and may fall outside the standard shipping days.
   Stock. Support agents do not have live stock information; customers should check the
-  product page, where availability is shown in real time.
+  product page, where availability is shown in real time. Warehouse staff can confirm physical
+  stock for registered trade accounts on request.
 
 expected: |
   Must say:

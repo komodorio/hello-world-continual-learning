@@ -45,7 +45,7 @@ async def test_index_and_cases(client: httpx.AsyncClient) -> None:
     assert (await client.get("/")).status_code == 200
     body = (await client.get("/cases")).json()
     assert body["task"] == "support"
-    assert [c["id"] for c in body["cases"]] == ["compensation", "missing-feature", "refund", "two-questions"]
+    assert [c["id"] for c in body["cases"]] == ["compensation", "missing-feature", "multi-request", "refund"]
     assert body["models"]["student"] == "fake/student"
     assert "Output format:" in body["prompt"]
 
@@ -53,7 +53,7 @@ async def test_index_and_cases(client: httpx.AsyncClient) -> None:
 async def test_start_streams_events_and_saves_the_run(
     client: httpx.AsyncClient, fake: FakeModel, config: Config
 ) -> None:
-    fake.student_scores = [{c.id: 0.5 for c in fake.cases}, {c.id: 0.9 for c in fake.cases}]
+    fake.student_scores = [{c.id: 0.9 for c in fake.cases}]  # within the gap from round one
     started = await client.post("/start", json={"cases": ["refund", "compensation"], "rounds": 3})
     assert started.status_code == 200
     run_id = started.json()["id"]
@@ -70,7 +70,7 @@ async def test_start_streams_events_and_saves_the_run(
 
     runs = (await client.get("/runs")).json()
     assert [r["id"] for r in runs] == [run_id]
-    assert runs[0]["student_means"] == [0.5, 0.9]
+    assert runs[0]["student_means"] == [0.9, 0.9]
     detail = (await client.get(f"/runs/{run_id}")).json()
     assert len(detail["rounds"]) == 2 and detail["rounds"][0]["next_prompt"]["version"] == 2
     assert (await client.get("/runs/does-not-exist")).status_code == 404

@@ -61,13 +61,13 @@ async def test_grade_rejects_mismatched_case(fake: FakeModel, support_task: Task
         await evaluator.grade(record, support_task.cases[0], task=support_task, model="fake/judge")
 
 
-async def test_grade_retries_once_then_raises_on_garbage(fake: FakeModel, support_task: Task) -> None:
+async def test_grade_retries_then_raises_on_garbage_with_the_evidence(fake: FakeModel, support_task: Task) -> None:
     case = support_task.cases[0]
     record = Record(agent="student", model="m", prompt_version=1, case_id=case.id, reply="[student v1] hi")
     fake.judge_text = "no json here"
-    with pytest.raises(JudgeOutputError):
+    with pytest.raises(JudgeOutputError, match=r"finish_reason='stop'.*12 chars"):
         await evaluator.grade(record, case, task=support_task, model="fake/judge")
-    assert len([c for c in fake.calls if c["model"] == "fake/judge"]) == 2
+    assert len([c for c in fake.calls if c["model"] == "fake/judge"]) == 3
 
 
 async def test_recommend_pairs_teacher_and_student_per_case(fake: FakeModel, support_task: Task) -> None:

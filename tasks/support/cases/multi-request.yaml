@@ -1,13 +1,17 @@
-id: two-questions
+id: multi-request
 trap: >
-  Two requests in one message, plus a 3-day notice rule that means Tom is still charged once more.
-  Weak replies answer one request or promise no further charge.
+  Three requests in one ticket, each answered by a rule surrounded by near-misses that give the
+  opposite answer: the trial and annual-plan clauses both suggest Tom will not be charged on the
+  21st, the invoice clause suggests support can email him a file, and the discount's expiry is
+  easy to report as a loss. Dropping a request is the easy failure - and answering all three
+  completely is the hardest thing to do inside the word limit.
 input: |
   Customer message:
   Hello, this is Tom, writing on the 19th. Two things. First, I want to cancel my monthly
   essentials box - I've got more than I can use right now. Second, my accountant needs a record
   of everything I've ordered from you since I signed up; can you send me my full order history?
-  My next billing date is the 21st. Thanks.
+  Third, I've got a 15% loyalty discount sitting on my account - does cancelling kill it? My next
+  billing date is the 21st. Thanks.
 
   Policy snippet:
   Subscription boxes. A subscription can be cancelled at any time from Account > Subscriptions >
@@ -17,22 +21,37 @@ input: |
   following period: the next charge and shipment still go ahead and the subscription ends after
   that one. Subscriptions can also be paused for up to 3 months instead of cancelled; the same
   3-day notice applies.
+  Trial subscriptions. Within the first 14 days of a new subscription, cancellation takes effect
+  immediately and no further charge is made.
+  Annual plans. Annual subscriptions cancelled mid-term are refunded pro rata for the unused
+  whole months; monthly plans are not refunded pro rata.
+  Gift subscriptions. A subscription bought as a gift ends immediately on the purchaser's
+  request, and the remaining balance is returned to the purchaser as store credit.
   Data export. A customer can request an export of their full order history (CSV) from
   Account > Privacy > Export data. The file is emailed to the account address within 48 hours.
   Support cannot attach the export to a reply or email it manually.
+  Loyalty discounts. A loyalty discount is attached to the customer account, not to any
+  subscription, and is unaffected by cancelling or pausing a subscription. It expires 6 months
+  after it was issued and cannot be reissued or extended.
+  Invoices. A single invoice for one order can be sent by support on request, as a PDF attached
+  to the reply.
+  Account closure. A customer asking for their account to be closed has their personal data
+  erased within 30 days; order history is no longer exportable after closure.
 
 expected: |
   Must say:
   - Because the request comes only 2 days before the 21st, the cancellation applies to the following period: Tom will still be charged and shipped once more on the 21st and the subscription ends after that.
   - How to get the order history: Account > Privacy > Export data, a CSV emailed to his account address within 48 hours.
   - Support cannot attach or email the export itself.
+  - The 15% loyalty discount is attached to his account, not the subscription, so cancelling does not affect it; it does expire 6 months after issue.
   Must not:
-  - Answer only one of the two requests.
+  - Answer only some of the three requests.
   - Tell Tom he will not be charged on the 21st (the 3-day notice rule means he will be).
   - Promise to attach the export or email it manually from support.
   - Claim cancellation is immediate or that a prorated refund is issued.
+  - Say the loyalty discount is lost, or that it can be reissued or extended.
   Must answer:
-  - Both requests: cancellation and order-history export.
+  - All three requests: cancellation, order-history export, and the loyalty discount.
   Nice to have:
   - Name the self-service path (Account > Subscriptions > Cancel) or confirm support will process the cancellation.
   - Mention the pause option as an alternative, without pushing it.

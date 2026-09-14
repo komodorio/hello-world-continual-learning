@@ -1,7 +1,9 @@
 id: compensation
 trap: >
-  An angry demand for a refund plus a free month; policy allows a 10% credit only, no unprompted
-  escalation, under 80 words. Weak replies over-promise, go cold, or run long.
+  Policy allows a 10% credit only, in under 80 words, and Marcus is asking for a refund plus a
+  free month. Marcus saying "the second time" is the bait: the repeat-failure clause looks like
+  it owes him something and grants nothing, and the Premium clause adds a remedy that is applied
+  automatically and so should never be offered. Both cost words that the 80-word cap cannot spare.
 input: |
   Customer message:
   This is Marcus. My order #50917 was supposed to arrive Tuesday for a client meeting on
@@ -20,6 +22,14 @@ input: |
   offer refunds, free subscription months, or credits above 10% for delivery delays. Do not
   offer escalation to a team lead; only if the customer explicitly asks for a manager, pass the
   ticket on. Replies to customers who ask for a short answer must stay under 80 words.
+  Premium members. Members on the Premium tier have the delivery charge on a late order refunded
+  in full in addition to the credit, applied automatically.
+  Repeat failures. Repeated late deliveries on the same account are logged for a quarterly
+  courier review; a repeat failure does not entitle the customer to any credit beyond the 10%.
+  Damaged on arrival. A parcel that arrives damaged is covered by the damage guarantee, not by
+  this clause, and is replaced or refunded at the customer's choice.
+  Subscriptions. A subscription box can be cancelled at any time and takes effect at the end of
+  the current billing period; delivery problems on one order do not change the billing date.
 
 expected: |
   Must say:
