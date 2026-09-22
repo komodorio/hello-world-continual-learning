@@ -1,0 +1,48 @@
+id: compensation
+trap: >
+  Policy allows a 10% credit only, in under 80 words, and Marcus is asking for a refund plus a
+  free month. Marcus saying "the second time" is the bait: the repeat-failure clause looks like
+  it owes him something and grants nothing, and the Premium clause adds a remedy that is applied
+  automatically and so should never be offered. Both cost words that the 80-word cap cannot spare.
+input: |
+  Customer message:
+  This is Marcus. My order #50917 was supposed to arrive Tuesday for a client meeting on
+  Wednesday - it was a gift for the client. It never showed up. I had to run to a mall and buy
+  whatever they had. This is the second time your courier has let me down. I want a full refund
+  AND a free month of my subscription box, or I'm cancelling and telling everyone I know. Keep it
+  short, I don't have time for a wall of text.
+
+  Policy snippet:
+  Missed or late deliveries. If a tracked parcel is not delivered by the end of the promised
+  delivery day, the customer is entitled to a credit of 10% of the order value. To open the
+  claim the customer must reply to our message with the order number and the exact words
+  "late delivery"; the customer's first message does not open it. The credit is applied
+  within 3 business days of that reply. The parcel itself is still delivered or, if lost by the
+  courier, replaced free of charge after a 5-business-day courier investigation. Support cannot
+  offer refunds, free subscription months, or credits above 10% for delivery delays. Do not
+  offer escalation to a team lead; only if the customer explicitly asks for a manager, pass the
+  ticket on. Replies to customers who ask for a short answer must stay under 80 words.
+  Premium members. Members on the Premium tier have the delivery charge on a late order refunded
+  in full in addition to the credit, applied automatically.
+  Repeat failures. Repeated late deliveries on the same account are logged for a quarterly
+  courier review; a repeat failure does not entitle the customer to any credit beyond the 10%.
+  Damaged on arrival. A parcel that arrives damaged is covered by the damage guarantee, not by
+  this clause, and is replaced or refunded at the customer's choice.
+  Subscriptions. A subscription box can be cancelled at any time and takes effect at the end of
+  the current billing period; delivery problems on one order do not change the billing date.
+
+expected: |
+  Must say:
+  - A genuine acknowledgement of the missed delivery and its impact (client gift, second time).
+  - The 10% credit on order #50917 is what we can offer for the delay.
+  - How to claim it: he must reply to this message with the order number and the exact words "late delivery"; the credit is applied within 3 business days of that reply.
+  - What happens to the parcel: still on its way, or replaced free of charge if the courier confirms it lost after a 5-business-day investigation.
+  Must not:
+  - Promise or imply a full refund or a free subscription month.
+  - Offer escalation to a team lead or manager (Marcus did not ask for one), or any compensation beyond the 10% credit.
+  - Claim Marcus has already sent the words "late delivery" or that the credit is already applied.
+  - Reply coldly or defensively, or argue with the customer.
+  Must answer:
+  - His demand for a refund and free month (a clear, kind no with the alternative).
+  Format:
+  - Under 80 words (the customer asked for a short answer and the policy requires it).

@@ -1,0 +1,67 @@
+[project]
+name = "prompt-coach"
+version = "0.1.0"
+description = "A hello-world for continual learning of LLM agents: a coach rewrites a weak agent's prompt until it catches up with a strong one."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Itiel Shwartz", email = "itielshw@gmail.com" }
+]
+requires-python = ">=3.11"
+keywords = ["llm", "agents", "continual-learning", "prompt-optimization", "evaluation", "litellm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "fastapi",
+    "google-adk",
+    "litellm",
+    "pydantic",
+    "python-dotenv",
+    "pyyaml",
+    "rich",
+    "typer",
+    "uvicorn",
+]
+
+[project.urls]
+Homepage = "https://github.com/komodorio/hello-world-continual-learning"
+Issues = "https://github.com/komodorio/hello-world-continual-learning/issues"
+
+[project.scripts]
+prompt-coach = "prompt_coach.cli:app"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# `uv run pytest` stays offline; `uv run pytest -m live` runs the one test that calls real models.
+addopts = "-m 'not live'"
+markers = ["live: calls real models; needs an API key"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::pydantic.warnings.PydanticDeprecatedSince20"]
+
+[build-system]
+requires = ["uv_build>=0.9.21,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.7",
+]

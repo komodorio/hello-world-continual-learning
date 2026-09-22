@@ -1,0 +1,24 @@
+# prompt-coach configuration. Copy to config.yaml and edit.
+#
+# Every model is a LiteLLM model string; the matching API key is read from .env
+# (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY, ...). bedrock/... uses the boto3
+# credential chain instead of a key, and needs AWS_REGION_NAME in .env.
+# Model ids below were taken from GET https://api.anthropic.com/v1/models.
+
+models:
+  teacher: anthropic/claude-sonnet-5
+  student: anthropic/claude-haiku-4-5-20251001
+  # student: baseten/moonshotai/Kimi-K2.5    # example: Kimi on Baseten Model APIs; needs BASETEN_API_KEY in .env
+  # student: bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0   # example: the same model via AWS Bedrock; needs AWS_REGION_NAME in .env
+  # student: openrouter/moonshotai/kimi-k2   # example: swap the student to Kimi via OpenRouter
+  evaluator: anthropic/claude-sonnet-5
+  coach: anthropic/claude-sonnet-5
+
+task: tasks/support        # folder with task.yaml + cases/*.yaml
+runs_dir: runs             # every run is appended to <runs_dir>/<timestamp>.json
+
+loop:
+  max_rounds: 5            # stop after this many rounds
+  min_rounds: 3            # floor: the gap cannot close before this many rounds have run
+  gap: 0.05                # stop when student_mean >= teacher_mean - gap for two rounds running
+  coach_threshold: 0.7     # student runs scored below this are shown to the coach

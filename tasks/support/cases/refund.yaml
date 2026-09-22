@@ -1,0 +1,50 @@
+id: refund
+trap: >
+  The damage guarantee that covers Dana is the fourth of seven clauses, and three of the others
+  look applicable and would deny her: the 30-day return rule, the 14-day marketplace rule and the
+  48-hour Fragile-Plus breakage rule. The gift-order clause is a near-miss on her gift-card
+  question - it sends refunds to store credit, which is not what her case calls for.
+input: |
+  Customer message:
+  Hi, I'm Dana. I ordered a set of six ceramic mugs on the 3rd of last month (order #48213) and
+  the box arrived on the 6th. I only unpacked it three days ago, 38 days after delivery, and two
+  of the mugs are cracked - the inner packaging was crushed. I'd like a refund please. Also, I
+  paid half with a gift card and half with my Visa - where would the money go back to?
+
+  Policy snippet:
+  Returns & refunds. Unused items in original packaging may be returned for a full refund
+  within 30 days of delivery; after 30 days no change-of-mind refund is available. Return
+  shipping on a change-of-mind return is paid by the customer.
+  Marketplace items. Items sold by partner sellers (shown as "Sold by" on the product page) are
+  covered by that seller's own returns policy, normally 14 days from delivery, and claims are
+  raised with the seller rather than with Loomi.
+  Fragile-Plus range. Items in the Fragile-Plus catalogue range ship in reinforced crates and
+  carry their own breakage clause: breakage must be reported within 48 hours of delivery and the
+  crate kept for courier inspection.
+  Damage guarantee. Items that arrive damaged or defective (including damage from crushed or
+  inadequate packaging) are covered for 60 days from delivery, provided the customer reports the
+  problem within 7 days of unpacking. Under the guarantee we replace the item or refund it, at
+  the customer's choice, once the customer sends a photo of the damage and of the shipping
+  label to support@loomi.example; claims are processed within 2 business days of receiving
+  the photo.
+  Gift orders. An order placed with a gift receipt, or shipped to a third party, is refunded as
+  store credit to the purchaser and never to the original card.
+  Payments. Refunds always go back to the original payment method. The portion paid with a
+  gift card is returned as gift-card balance, never as cash or to a card.
+  Promotional pricing. Where a discount code was applied, the refund is the amount actually
+  paid; the discount itself is not refunded in cash and the code is not reissued.
+
+expected: |
+  Must say:
+  - Dana is covered by the 60-day damage guarantee (cracked mugs / crushed packaging) and she reported it within 7 days of unpacking, so the 30-day limit does not apply.
+  - She can choose either a replacement or a refund.
+  - Next step: send a photo of the damage and of the shipping label to support@loomi.example; the claim is processed within 2 business days of receiving it.
+  - Where the money goes: the Visa half back to the Visa card, the gift-card half back as gift-card balance.
+  Must not:
+  - Refuse the refund because the 30-day window has passed or because the box was opened (the damage exception applies).
+  - Approve or issue the refund unconditionally without asking for the photo.
+  - Say the whole amount goes back to the card, or offer to refund the gift-card half as cash / to the card.
+  - Invent extra compensation (discount codes, free shipping, store credit).
+  Must answer:
+  - Whether she can get a refund.
+  - Where the money goes back to.
